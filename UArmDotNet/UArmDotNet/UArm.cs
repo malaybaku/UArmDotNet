@@ -22,25 +22,30 @@ namespace Baku.UArmDotNet
             throw new NotImplementedException();
         }
 
+        //NOTE: SerialPort使わない。人、これを腐敗防止と呼ぶ。
+        private ISerialConnector _serial;
 
 
         public void Connect()
         {
-
+            _serial.Connect();
         }
 
         public void Disconnect()
         {
-
+            _serial.Disconnect();
         }
 
         public bool IsConnected
         {
-            get { throw new NotImplementedException(); }
+            get { return _serial.IsConnected; }
         }
 
-        public string GetVersion() 
+        public string GetFirmwareVersion() 
         {
+            int id = _serial.PostCommand(Protocol.GET_FIRMWARE_VERSION);
+            string res = _serial.WaitCommandResponse(id);
+
             throw new NotImplementedException();
         }
         public string GetHardwareVersion()
@@ -152,5 +157,6 @@ namespace Baku.UArmDotNet
         {
             Disconnect();
         }
+
     }
 }
