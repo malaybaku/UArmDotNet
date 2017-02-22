@@ -15,13 +15,7 @@ namespace Baku.UArmDotNet
 
         void Post(byte[] command);
         event EventHandler<SerialDataReceivedEventArgs> Received;
-        /// <summary>NOTE: 明示的にDisconnectした場合も発生してほしいが、
-        /// クライアント側はDisconnect関数呼んでもこれは飛んでこない可能性を想定すること</summary>
         event EventHandler Disconnected;
-
-        //event EventHandler< Received:
-        //string WaitCommandResponse(int id); 
-
     }
 
     public class SerialDataReceivedEventArgs : EventArgs
@@ -33,10 +27,16 @@ namespace Baku.UArmDotNet
         public byte[] Data { get; private set; }
     }
 
-    public interface ISerialResponse
+    public class SerialConnectionErrorEventArgs : EventArgs
     {
-        int Id { get; }
-        string[] Params { get; }
+        public SerialConnectionErrorEventArgs(string message)
+        {
+            Message = message;
+        }
+
+        public string Message { get; private set; }
     }
+    
+
 
 }

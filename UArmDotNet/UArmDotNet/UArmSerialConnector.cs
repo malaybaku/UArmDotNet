@@ -1,34 +1,67 @@
 ﻿using System;
+using System.Reactive.Linq;
+using System.Reactive.Subjects;
 using System.Text;
 
 namespace Baku.UArmDotNet
 {
-    public class UArmSerialConnector
+    public class UArmConnector
     {
-        public UArmSerialConnector(ISerialConnector serial)
+        public UArmConnector(ISerialConnector serial)
         {
             _serial = serial;
             _serial.Received += OnDataReceived;
-
+            
 
         }
         private readonly ISerialConnector _serial;
 
-        public string Transact(string command)
+        public void Connect()
         {
-            throw new NotImplementedException();
+            _serial.Connect();
         }
+        public void Disconnect()
+        {
+            _serial.Disconnect();
+        }
+        public bool IsConnected
+        {
+            get { return _serial.IsConnected; }
+        }
+        
 
-        public int Post(string command)
+
+        /// <summary>コマンドを投げて単一の返信を非同期で取得する</summary>
+        /// <param name="command">コマンド文字列</param>
+        /// <returns>非同期の処理結果</returns>
+        public IObservable<UArmResponse> Transact(string command)
         {
             int id = GenerateCommandId();
 
-            //TODO: Encodeエラー対策
+            var result = new AsyncSubject<UArmResponse>();
+
+            Observable.FromEventPattern<UArmSerialDataReceivedEventArgs>(this, nameof(Received))
+                .Where(ep => ep.EventArgs.Data.Id == id)
+                .Select(ep => ep.EventArgs.Data)
+                .FirstAsync()
+                .Subscribe(result);
+
+            PostToSerial(id, command);
+
+            return result;
+        }
+
+        /// <summary>コマンドを投げてそのまま結果は見ない</summary>
+        /// <param name="command">コマンド文字列</param>
+        public void Post(string command)
+        {
+            PostToSerial(GenerateCommandId(), command);
+        }
+
+        private void PostToSerial(int id, string command)
+        {
             byte[] cmd = Encoding.ASCII.GetBytes(string.Format("#{0} {1}\n", id, command));
             _serial.Post(cmd);
-
-            //TODO: キューかなんかにID放り込む必要ある？いやないか？
-            return id;
         }
 
         private void OnDataReceived(object sender, SerialDataReceivedEventArgs e)
@@ -39,6 +72,10 @@ namespace Baku.UArmDotNet
 
         }
 
+        public event EventHandler<UArmSerialDataReceivedEventArgs> Received;
+
+        private void RaiseOnReceived(UArmResponse e)
+            => Received?.Invoke(this, new UArmSerialDataReceivedEventArgs(e));
 
         private static int _commandId = 0;
         private static readonly object _generateIdLock = new object();
@@ -53,4 +90,15 @@ namespace Baku.UArmDotNet
         }
 
     }
+
+    public class UArmSerialDataReceivedEventArgs : EventArgs
+    {
+        public UArmSerialDataReceivedEventArgs(UArmResponse data)
+        {
+            Data = data;
+        }
+
+        public UArmResponse Data { get; }
+    }
+
 }

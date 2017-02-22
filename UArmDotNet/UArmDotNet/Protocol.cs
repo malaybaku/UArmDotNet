@@ -14,19 +14,21 @@ namespace Baku.UArmDotNet
 
         // Set Command
 
-        public static readonly string SET_POSITION            = "G0 X{} Y{} Z{} F{}";
-        public static readonly string SET_POSITION_RELATIVE   = "G204 X{} Y{} Z{} F{}";
-        public static readonly string SET_SERVO_ANGLE         = "G202 N{} V{}";
+        public static readonly string SET_POSITION            = "G0 X{0:.##} Y{1.##} Z{2.##} F{3.##}";
+        public static readonly string SET_POSITION_RELATIVE   = "G204 X{0:.##} Y{1:.##} Z{2:.##} F{3:.##}";
+        public static readonly string SET_SERVO_ANGLE         = "G202 N{0} V{1}";
         public static readonly string STOP_MOVING             = "G203";
-        public static readonly string SET_PUMP                = "M231 V{}";
+        public static readonly string SET_PUMP                = "M231 V{0}";
         public static readonly string GET_PUMP                = "P231";
-        public static readonly string SET_GRIPPER             = "M232 V{}";
-        public static readonly string SET_BUZZER              = "M210 F{} T{}";
-        public static readonly string SET_POLAR               = "G201 S{} R{} H{} F{}";
-        public static readonly string ATTACH_SERVO            = "M201 N{}";
-        public static readonly string DETACH_SERVO            = "M202 N{}";
+        public static readonly string SET_GRIPPER             = "M232 V{0}";
+        public static readonly string SET_BUZZER              = "M210 F{0} T{1}";
+        public static readonly string SET_POLAR               = "G201 S{0} R{1} H{2} F{3}";
+        public static readonly string ATTACH_SERVO            = "M201 N{0}";
+        public static readonly string DETACH_SERVO            = "M202 N{0}";
         
-        // Get Command        public static readonly string GET_SIMULATION          = "M222 X{} Y{} Z{} P0";
+        // Get Command
+
+        public static readonly string GET_SIMULATION          = "M222 X{0} Y{1} Z{2} P0";
         public static readonly string GET_FIRMWARE_VERSION    = "P203";
         public static readonly string GET_HARDWARE_VERSION    = "P202";
         public static readonly string GET_COOR                = "P220";
@@ -35,12 +37,13 @@ namespace Baku.UArmDotNet
         public static readonly string GET_TIP_SENSOR          = "P233";
         public static readonly string GET_POLAR               = "P221";
         public static readonly string GET_GRIPPER             = "P232";
-        public static readonly string GET_EEPROM              = "M211 N0 A{} T{}";
-        public static readonly string SET_EEPROM              = "M212 N0 A{} T{} V{}";
-        public static readonly string GET_ANALOG              = "P241 N{}";
-        public static readonly string GET_DIGITAL             = "P240 N{}";
+        public static readonly string GET_EEPROM              = "M211 N0 A{0} T{1}";
+        public static readonly string SET_EEPROM              = "M212 N0 A{0} T{1} V{2}";
+        public static readonly string GET_ANALOG              = "P241 N{0}";
+        public static readonly string GET_DIGITAL             = "P240 N{0}";
 
-        // Report Command        public static readonly string SET_REPORT_POSITION     = "M120 V{}";
+        // Report Command
+        public static readonly string SET_REPORT_POSITION     = "M120 V{0}";
         public static readonly string REPORT_POSITION_PREFIX  = "@3";
 
     }
