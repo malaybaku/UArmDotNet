@@ -2,7 +2,7 @@
 
 namespace Baku.UArmDotNet
 {
-    public interface ISerialConnector : IDisposable
+    public interface IRobotConnector : IDisposable
     {
         int TimeoutMillisec { get; set; }
 

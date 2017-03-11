@@ -7,14 +7,12 @@ namespace Baku.UArmDotNet
 {
     public class UArmConnector
     {
-        public UArmConnector(ISerialConnector serial)
+        public UArmConnector(IRobotConnector serial)
         {
             _serial = serial;
             _serial.Received += OnDataReceived;
-            
-
         }
-        private readonly ISerialConnector _serial;
+        private readonly IRobotConnector _serial;
 
         public void Connect()
         {

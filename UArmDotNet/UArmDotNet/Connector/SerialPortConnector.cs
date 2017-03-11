@@ -3,11 +3,12 @@ using System.IO.Ports;
 
 namespace Baku.UArmDotNet
 {
-    public class SerialPortConnector : ISerialConnector
+    public class SerialPortConnector : IRobotConnector
     {
         public SerialPortConnector()
         {
             _serial = new SerialPort();
+            
         }
 
         private readonly SerialPort _serial;
@@ -71,5 +72,39 @@ namespace Baku.UArmDotNet
         {
             Disconnect();
         }
+
+        private void OnReceived(byte[] data)
+        {
+            byte[] bin = new byte[data.Length];
+            Array.Copy(data, bin, data.Length);
+            if(Received != null)
+            {
+                Received(this, new SerialDataReceivedEventArgs(bin));
+            }
+        }
+
+        private void StartSerialReceive()
+        {
+            byte[] buf = new byte[SerialBlockSizeLimit];
+
+            Action actReceive = null;
+            actReceive = () =>
+            {
+                _serial.BaseStream.BeginRead(buf, 0, buf.Length, ar =>
+                {
+                    int actualLen = _serial.BaseStream.EndRead(ar);
+                    if (actualLen > 0)
+                    {
+                        byte[] received = new byte[actualLen];
+                        Array.Copy(buf, 0, received, 0, received.Length);
+                        OnReceived(received);
+                    }
+                    actReceive();
+                }, null);
+            };
+
+        }
+
+        private const int SerialBlockSizeLimit = 1024;
     }
 }

@@ -19,10 +19,16 @@ namespace Baku.UArmDotNet
             return (Args.Length > 0) && Args[1].StartsWith(Protocol.OK);
         }
 
-        /// <summary>Convert to version info string, if subject to UArm serial data's appropriate format</summary>
+        //こっちはobsoleteなのでさっさと消すこと
+        public string ToVersion()
+        {
+            return ToInfoString();
+        }
+
+        /// <summary>Convert to some information string, if subject to UArm serial data's appropriate format</summary>
         /// <returns>Converted bool value, or <see cref="FormatException"/> will be thrown.</returns>
         /// <exception cref="FormatException"/>
-        public string ToVersion()
+        public string ToInfoString()
         {
             if (Args.Length < 2)
             {
@@ -131,7 +137,41 @@ namespace Baku.UArmDotNet
                 );
         }
 
+        internal PumpStates ToPumpState()
+        {
+            if (Args.Length < 2)
+            {
+                throw new FormatException();
+            }
 
+            int res = int.Parse(Args[1].Substring(1));
+            switch(res)
+            {
+                case 0: return PumpStates.Stop;
+                case 1: return PumpStates.Working;
+                case 2: return PumpStates.Grabbing;
+                default:
+                    throw new UArmCommandException();
+            }
+        }
+
+        internal GripperStates ToGripperState()
+        {
+            if (Args.Length < 2)
+            {
+                throw new FormatException();
+            }
+
+            int res = int.Parse(Args[1].Substring(1));
+            switch (res)
+            {
+                case 0: return GripperStates.Stop;
+                case 1: return GripperStates.Working;
+                case 2: return GripperStates.Grabbing;
+                default:
+                    throw new UArmCommandException();
+            }
+        }
     }
 
 }
