@@ -219,7 +219,7 @@ namespace Baku.UArmDotNet
         {
             return Transact(command).Select(res =>
             {
-                if (res.IsOK()) return Unit.Default;
+                if (res.IsOK) return Unit.Default;
                 throw UArmExceptionFactory.CreateExceptionFromResponse(res);
             });
         }

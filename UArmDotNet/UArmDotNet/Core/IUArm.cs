@@ -1,13 +1,19 @@
 ﻿using System;
 using System.Reactive;
-using System.Reactive.Linq;
 
 namespace Baku.UArmDotNet
 {
     public interface IUArm
     {
         //Motion
+        /// <summary>
+        /// Async move by given cartesian coordinate point
+        /// </summary>
+        /// <param name="position">Destination position</param>
+        /// <param name="speed">motion speed in [mm/min]</param>
+        /// <returns></returns>
         IObservable<Unit> MoveAsync(Position position, float speed);
+
         IObservable<Unit> MoveRelativeAsync(float dx, float dy, float dz, float speed);
         IObservable<Unit> MoveAsync(Polar polar, float speed);
         IObservable<Unit> SetServoAsync(Servos servo, float angle);
@@ -56,29 +62,4 @@ namespace Baku.UArmDotNet
 
     }
 
-
-    public static class IUArmExtensions
-    {
-        //NOTE: とりあえずモーション系だけ作ったが、そもそもコレ系必要なのか考えるべきでは
-        public static void Move(this IUArm uarm, Position position, float speed)
-        {
-            uarm.MoveAsync(position, speed).Wait();
-        }
-        public static void MoveRelative(this IUArm uarm, float dx, float dy, float dz, float speed)
-        {
-            uarm.MoveRelativeAsync(dx, dy, dz, speed).Wait();
-        }
-        public static void Move(this IUArm uarm, Polar polar, float speed)
-        {
-            uarm.MoveAsync(polar, speed).Wait();
-        }
-        public static void SetServo(this IUArm uarm, Servos servo, float angle)
-        {
-            uarm.SetServoAsync(servo, angle).Wait();
-        }
-        public static void StopMotion(this IUArm uarm)
-        {
-            uarm.StopMotionAsync().Wait();
-        }
-    }
 }

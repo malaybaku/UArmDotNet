@@ -11,19 +11,21 @@ namespace Baku.UArmDotNet
             Args = args;
         }
 
+        /// <summary>Get the Id bound to the command sent from this client.</summary>
         public int Id { get; }
+
+        /// <summary>Get the raw response string data</summary>
         public string[] Args { get; }
 
-        public bool IsOK()
+        /// <summary>Get whether the response means 'OK' or not.</summary>
+        public bool IsOK
         {
-            return (Args.Length > 0) && Args[1].StartsWith(Protocol.OK);
+            get
+            {
+                return (Args.Length > 1) && Args[1].StartsWith(Protocol.OK);
+            }
         }
 
-        //こっちはobsoleteなのでさっさと消すこと
-        public string ToVersion()
-        {
-            return ToInfoString();
-        }
 
         /// <summary>Convert to some information string, if subject to UArm serial data's appropriate format</summary>
         /// <returns>Converted bool value, or <see cref="FormatException"/> will be thrown.</returns>
@@ -137,7 +139,7 @@ namespace Baku.UArmDotNet
                 );
         }
 
-        internal PumpStates ToPumpState()
+        public PumpStates ToPumpState()
         {
             if (Args.Length < 2)
             {
@@ -147,15 +149,16 @@ namespace Baku.UArmDotNet
             int res = int.Parse(Args[1].Substring(1));
             switch(res)
             {
-                case 0: return PumpStates.Stop;
-                case 1: return PumpStates.Working;
-                case 2: return PumpStates.Grabbing;
+                case (int)PumpStates.Stop:
+                case (int)PumpStates.Working:
+                case (int)PumpStates.Grabbing:
+                    return (PumpStates)res;
                 default:
                     throw new UArmCommandException();
             }
         }
 
-        internal GripperStates ToGripperState()
+        public GripperStates ToGripperState()
         {
             if (Args.Length < 2)
             {
@@ -165,9 +168,10 @@ namespace Baku.UArmDotNet
             int res = int.Parse(Args[1].Substring(1));
             switch (res)
             {
-                case 0: return GripperStates.Stop;
-                case 1: return GripperStates.Working;
-                case 2: return GripperStates.Grabbing;
+                case (int)GripperStates.Stop:
+                case (int)GripperStates.Working:
+                case (int)GripperStates.Grabbing:
+                    return (GripperStates)res;
                 default:
                     throw new UArmCommandException();
             }

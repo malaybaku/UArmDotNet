@@ -3,9 +3,12 @@ using System.IO.Ports;
 
 namespace Baku.UArmDotNet
 {
-    public class SerialPortConnector : IRobotConnector
+    /// <summary>
+    /// シリアル通信でロボット接続するコネクターの実装です。
+    /// </summary>
+    public class SerialRobotConnector : IRobotConnector
     {
-        public SerialPortConnector()
+        public SerialRobotConnector()
         {
             _serial = new SerialPort();
             
@@ -44,6 +47,10 @@ namespace Baku.UArmDotNet
         public void Connect()
         {
             _serial.Open();
+            if (IsConnected)
+            {
+                StartSerialReceive();
+            }
         }
 
         public void Disconnect()
@@ -51,9 +58,9 @@ namespace Baku.UArmDotNet
             if (IsConnected)
             {
                 _serial.Close();
-                if (!IsConnected)
+                if (Disconnected != null)
                 {
-
+                    Disconnected(this, EventArgs.Empty);
                 }
             }
         }
@@ -85,6 +92,7 @@ namespace Baku.UArmDotNet
 
         private void StartSerialReceive()
         {
+            //TODO: BeginReadのレスポンスでCloseを検知できる？？
             byte[] buf = new byte[SerialBlockSizeLimit];
 
             Action actReceive = null;
@@ -99,7 +107,11 @@ namespace Baku.UArmDotNet
                         Array.Copy(buf, 0, received, 0, received.Length);
                         OnReceived(received);
                     }
-                    actReceive();
+                    //NOTE: 少なくとも接続切れた場合はもう諦める(リーク防止を重視)
+                    if (IsConnected)
+                    {
+                        actReceive();
+                    }
                 }, null);
             };
 

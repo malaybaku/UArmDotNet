@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Baku.UArmDotNet
+﻿namespace Baku.UArmDotNet
 {
+    /// <summary>Represent servo motor types</summary>
     public enum Servos
     {
         Bottom = 0,
@@ -14,6 +9,7 @@ namespace Baku.UArmDotNet
         Hand = 3
     }
 
+    /// <summary>Represent EEPROM types</summary>
     public enum EEPROMDeviceType
     {
         Default = 0,
@@ -21,6 +17,7 @@ namespace Baku.UArmDotNet
         System = 2
     }
 
+    /// <summary>Represente the gripper states, meaningful only when attached.</summary>
     public enum GripperStates
     {
         Stop = 0,
@@ -28,6 +25,7 @@ namespace Baku.UArmDotNet
         Grabbing = 2
     }
 
+    /// <summary>Represente the suction pump states, meaningful only when attached.</summary>
     public enum PumpStates
     {
         Stop = 0,
@@ -35,6 +33,7 @@ namespace Baku.UArmDotNet
         Grabbing = 2
     }
 
+    /// <summary>(not used currently) indicates calibration operation types</summary>
     public enum CalibrationFlags
     {
         Calibration = 10,
@@ -43,16 +42,7 @@ namespace Baku.UArmDotNet
         CalibrationStretch = 13
     }
 
-
-    public enum EEPROMAddress
-    {
-        OffsetStrecth = 20,
-        OffsetStart = 30,
-        LinearSlopeStart = 50,
-        LinearInterceptStart = 70,
-        SerialNumber = 100,
-    }
-
+    /// <summary>Represent the data types saved in the EEPROM</summary>
     public enum EEPROMDataTypeCodes
     {
         Byte = 1,

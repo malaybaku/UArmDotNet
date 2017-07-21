@@ -7,24 +7,24 @@ namespace Baku.UArmDotNet
 {
     public class UArmConnector
     {
-        public UArmConnector(IRobotConnector serial)
+        public UArmConnector(IRobotConnector connector)
         {
-            _serial = serial;
-            _serial.Received += OnDataReceived;
+            _connector = connector;
+            _connector.Received += OnDataReceived;
         }
-        private readonly IRobotConnector _serial;
+        private readonly IRobotConnector _connector;
 
         public void Connect()
         {
-            _serial.Connect();
+            _connector.Connect();
         }
         public void Disconnect()
         {
-            _serial.Disconnect();
+            _connector.Disconnect();
         }
         public bool IsConnected
         {
-            get { return _serial.IsConnected; }
+            get { return _connector.IsConnected; }
         }
         
 
@@ -38,13 +38,13 @@ namespace Baku.UArmDotNet
 
             var result = new AsyncSubject<UArmResponse>();
 
-            Observable.FromEventPattern<UArmSerialDataReceivedEventArgs>(this, nameof(Received))
+            Observable.FromEventPattern<UArmResponseEventArgs>(this, nameof(Received))
                 .Where(ep => ep.EventArgs.Data.Id == id)
                 .Select(ep => ep.EventArgs.Data)
                 .FirstAsync()
                 .Subscribe(result);
 
-            PostToSerial(id, command);
+            PostImpl(id, command);
 
             return result;
         }
@@ -53,27 +53,32 @@ namespace Baku.UArmDotNet
         /// <param name="command">コマンド文字列</param>
         public void Post(string command)
         {
-            PostToSerial(GenerateCommandId(), command);
+            PostImpl(GenerateCommandId(), command);
         }
 
-        private void PostToSerial(int id, string command)
+        private void PostImpl(int id, string command)
         {
             byte[] cmd = Encoding.ASCII.GetBytes(string.Format("#{0} {1}\n", id, command));
-            _serial.Post(cmd);
+            _connector.Post(cmd);
         }
 
         private void OnDataReceived(object sender, SerialDataReceivedEventArgs e)
         {
-            //TODO: エンコードエラー対策(こっちは不要かもしれないが)
             string data = Encoding.ASCII.GetString(e.Data);
 
+            //TODO: こっから先どうしましょうね
 
         }
 
-        public event EventHandler<UArmSerialDataReceivedEventArgs> Received;
+        public event EventHandler<UArmResponseEventArgs> Received;
 
         private void RaiseOnReceived(UArmResponse e)
-            => Received?.Invoke(this, new UArmSerialDataReceivedEventArgs(e));
+        {
+            if (Received != null)
+            {
+                Received(this, new UArmResponseEventArgs(e));
+            }
+        }
 
         private static int _commandId = 0;
         private static readonly object _generateIdLock = new object();
@@ -89,9 +94,9 @@ namespace Baku.UArmDotNet
 
     }
 
-    public class UArmSerialDataReceivedEventArgs : EventArgs
+    public class UArmResponseEventArgs : EventArgs
     {
-        public UArmSerialDataReceivedEventArgs(UArmResponse data)
+        public UArmResponseEventArgs(UArmResponse data)
         {
             Data = data;
         }
