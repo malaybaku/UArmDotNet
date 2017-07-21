@@ -3,18 +3,10 @@ using System.IO.Ports;
 
 namespace Baku.UArmDotNet
 {
-    /// <summary>
-    /// シリアル通信でロボット接続するコネクターの実装です。
-    /// </summary>
-    public class SerialRobotConnector : IRobotConnector
+    /// <summary>Wrapper of the <see cref="System.IO.Ports.SerialPort"/> to connect safely</summary>
+    public class SerialRobotConnector
     {
-        public SerialRobotConnector()
-        {
-            _serial = new SerialPort();
-            
-        }
-
-        private readonly SerialPort _serial;
+        private readonly SerialPort _serial = new SerialPort();
 
         public event EventHandler<SerialDataReceivedEventArgs> Received;
         public event EventHandler Disconnected;
@@ -39,10 +31,7 @@ namespace Baku.UArmDotNet
             set { _serial.PortName = value; }
         }
 
-        public bool IsConnected
-        {
-            get { return _serial.IsOpen; }
-        }
+        public bool IsConnected => _serial.IsOpen; 
 
         public void Connect()
         {
@@ -58,10 +47,7 @@ namespace Baku.UArmDotNet
             if (IsConnected)
             {
                 _serial.Close();
-                if (Disconnected != null)
-                {
-                    Disconnected(this, EventArgs.Empty);
-                }
+                Disconnected?.Invoke(this, EventArgs.Empty);
             }
         }
 
@@ -71,7 +57,6 @@ namespace Baku.UArmDotNet
             {
                 throw new UArmException();
             }
-            //TODO: タイムアウトはUArmな例外でラップする方が無難じゃないですか
             _serial.Write(command, 0, command.Length);
         }
 
@@ -84,10 +69,7 @@ namespace Baku.UArmDotNet
         {
             byte[] bin = new byte[data.Length];
             Array.Copy(data, bin, data.Length);
-            if(Received != null)
-            {
-                Received(this, new SerialDataReceivedEventArgs(bin));
-            }
+            Received?.Invoke(this, new SerialDataReceivedEventArgs(bin));
         }
 
         private void StartSerialReceive()
@@ -118,5 +100,16 @@ namespace Baku.UArmDotNet
         }
 
         private const int SerialBlockSizeLimit = 1024;
+    }
+
+    public class SerialDataReceivedEventArgs : EventArgs
+    {
+        public SerialDataReceivedEventArgs(byte[] data)
+        {
+            Data = new byte[data.Length];
+            Array.Copy(data, Data, data.Length);
+        }
+
+        public byte[] Data { get; }
     }
 }

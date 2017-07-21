@@ -1,208 +1,164 @@
-﻿using System;
-using System.Linq;
-using System.Reactive;
-using System.Reactive.Linq;
+﻿using System.Threading.Tasks;
 
 namespace Baku.UArmDotNet
 {
     public class UArm : IUArm
     {
+        public UArm(UArmConnector connector)
+        {
+            Connector = connector;
+        }
+        public UArmConnector Connector { get; }
+
         //Motion
-        public IObservable<Unit> MoveAsync(Position position, float speed)
-        {
-            return SetCommandTransact(
-                string.Format(Protocol.MovePositionFormat, position.X, position.Y, position.Z, speed)
-                );
-        }
-        public IObservable<Unit> MoveRelativeAsync(float dx, float dy, float dz, float speed)
-        {
-            return SetCommandTransact(
-                string.Format(Protocol.MovePositionRelativeFormat, dx, dy, dz, speed)
-                );
-        }
-        public IObservable<Unit> MoveAsync(Polar polar, float speed)
-        {
-            return SetCommandTransact(
-                string.Format(Protocol.MovePolarFormat, polar.Stretch, polar.Rotation, polar.Height, speed)
-                );
-        }
-        public IObservable<Unit> SetServoAsync(Servos servo, float angle)
-        {
-            return SetCommandTransact(string.Format(Protocol.MoveServoFormat, (int)servo, angle));
-        }
-        public IObservable<Unit> StopMotionAsync()
-        {
-            return SetCommandTransact(Protocol.MoveStop);
-        }
+        public Task MoveAsync(Position position, float speed)
+            => SetCommandTransact(
+            string.Format(Protocol.MovePositionFormat, position.X, position.Y, position.Z, speed)
+            );
+        public Task MoveRelativeAsync(float dx, float dy, float dz, float speed)
+            => SetCommandTransact(
+            string.Format(Protocol.MovePositionRelativeFormat, dx, dy, dz, speed)
+            );
+        public Task MoveAsync(Polar polar, float speed)
+            => SetCommandTransact(
+            string.Format(Protocol.MovePolarFormat, polar.Stretch, polar.Rotation, polar.Height, speed)
+            );
+        public Task SetServoAsync(Servos servo, float angle)
+            => SetCommandTransact(string.Format(Protocol.MoveServoFormat, (int)servo, angle));
+        public Task StopMotionAsync()
+            => SetCommandTransact(Protocol.MoveStop);
 
         //Setting 
-        public IObservable<bool> CheckIsMovingAsync()
+        public Task<bool> CheckIsMovingAsync()
+            => BoolTransact(Protocol.CheckIsMoving);
+
+        public Task ActivateServoAsync(Servos servo)
+            => SetCommandTransact(string.Format(Protocol.ActivateServoFormat, (int)servo));
+
+        public Task DeactivateServoAsync(Servos servo)
+            => SetCommandTransact(string.Format(Protocol.DeactivateServoFormat, (int)servo));
+
+        public Task BeepAsync(int frequency, float durationSec)
+            => SetCommandTransact(string.Format(Protocol.BeepFormat, frequency, durationSec));
+
+        public async Task<Position> GetFKAsync(ServoAngles angles)
         {
-            return Transact(Protocol.CheckIsMoving).Select(res => res.ToBool());
+            var res = await Transact(string.Format(Protocol.GetFKFormat, angles.J0, angles.J1, angles.J2));
+            return res.ToPosition();
         }
-        public IObservable<Unit> ActivateServoAsync(Servos servo)
+        public async Task<ServoAngles> GetIKAsync(Position position)
         {
-            return SetCommandTransact(string.Format(Protocol.ActivateServoFormat, (int)servo));
-        }
-        public IObservable<Unit> DeactivateServoAsync(Servos servo)
-        {
-            return SetCommandTransact(string.Format(Protocol.DeactivateServoFormat, (int)servo));
-        }
-        public IObservable<Unit> BeepAsync(int frequency, float durationSec)
-        {
-            return SetCommandTransact(string.Format(Protocol.BeepFormat, frequency, durationSec));
+            var res = await Transact(string.Format(Protocol.GetIKFormat, position.X, position.Y, position.Z));
+            return res.ToServoAngles();
         }
 
-        public IObservable<Position> GetFKAsync(ServoAngles angles)
-        {
-            return Transact(string.Format(Protocol.GetFKFormat, angles.J0, angles.J1, angles.J2))
-                .Select(res => res.ToPosition());
-        }
-        public IObservable<ServoAngles> GetIKAsync(Position position)
-        {
-            return Transact(string.Format(Protocol.GetIKFormat, position.X, position.Y, position.Z))
-                .Select(res => res.ToServoAngles());
-        }
+        public Task<bool> CanReachAsync(Position position)
+            => BoolTransact(string.Format(Protocol.CanReachCartesianFormat, position.X, position.Y, position.Z));
+        public Task<bool> CanReachAsync(Polar polar)
+            => BoolTransact(string.Format(Protocol.CanReachPolarFormat, polar.Stretch, polar.Rotation, polar.Height));
 
-        public IObservable<bool> CanReachAsync(Position position)
+        public async Task SetPumpStateAsync(bool active)
         {
-            return Transact(string.Format(Protocol.CanReachCartesianFormat, position.X, position.Y, position.Z))
-                .Select(res => res.ToBool());
-        }
-        public IObservable<bool> CanReachAsync(Polar polar)
-        {
-            return Transact(string.Format(Protocol.CanReachPolarFormat, polar.Stretch, polar.Rotation, polar.Height))
-                .Select(res => res.ToBool());
-        }
-
-        public IObservable<Unit> SetPumpStateAsync(bool active)
-        {
-            return SetCommandTransact(
+            await SetCommandTransact(
                 string.Format(Protocol.SetPumpStateFormat, (active ? 1 : 0))
                 );
         }
-        public IObservable<Unit> SetGripperStateAsync(bool active)
+        public async Task SetGripperStateAsync(bool active)
         {
-            return SetCommandTransact(
+            await SetCommandTransact(
                 string.Format(Protocol.SetGripperStateFormat, (active ? 1 : 0))
                 );
         }
-        public IObservable<Unit> SetDigitalPinOutputAsync(int number, bool high)
+        public async Task SetDigitalPinOutputAsync(int number, bool high)
         {
-            return SetCommandTransact(
+            await SetCommandTransact(
                 string.Format(Protocol.SetDigitalOutputStateFormat, number, (high ? 1 : 0))
                 );
         }
         //Read
-        public IObservable<string> GetDeviceNameAsync()
+        public Task<string> GetDeviceNameAsync()
+            => GetInfoStringTransact(Protocol.GetDeviceName);
+        public Task<string> GetHardwareVersionAsync()
+            => GetInfoStringTransact(Protocol.GetHardwareVersion);
+        public Task<string> GetFirmwareVersionAsync()
+            => GetInfoStringTransact(Protocol.GetFirmwareVersion);
+        public Task<string> GetAPIVersionAsync()
+            => GetInfoStringTransact(Protocol.GetAPIVersion);
+        public Task<string> GetUIDAsync()
+            => GetInfoStringTransact(Protocol.GetUID);
+
+        public async Task<ServoAngles> GetServoAnglesAsync()
         {
-            return Transact(Protocol.GetDeviceName)
-                .Select(res => res.ToInfoString());
+            var res = await Transact(Protocol.GetServoAngle);
+            return res.ToServoAngles();
         }
-        public IObservable<string> GetHardwareVersionAsync()
+        public async Task<Position> GetPositionAsync()
         {
-            return Transact(Protocol.GetHardwareVersion)
-                .Select(res => res.ToInfoString());
+            var res = await Transact(Protocol.GetPosition);
+            return res.ToPosition();
         }
-        public IObservable<string> GetFirmwareVersionAsync()
+        public async Task<Polar> GetPolarAsync()
         {
-            return Transact(Protocol.GetFirmwareVersion)
-                .Select(res => res.ToInfoString());
-        }
-        public IObservable<string> GetAPIVersionAsync()
-        {
-            return Transact(Protocol.GetAPIVersion)
-                .Select(res => res.ToInfoString());
-        }
-        public IObservable<string> GetUIDAsync()
-        {
-            return Transact(Protocol.GetUID)
-                .Select(res => res.ToInfoString());
+            var res = await Transact(Protocol.GetPolar);
+            return res.ToPolar();
         }
 
-        public IObservable<ServoAngles> GetServoAnglesAsync()
+        public async Task<PumpStates> GetPumpStatusAsync()
         {
-            return Transact(Protocol.GetServoAngle)
-                .Select(res => res.ToServoAngles());
+            var res = await Transact(Protocol.GetPumpState);
+            return res.ToPumpState();
         }
-        public IObservable<Position> GetPositionAsync()
+        public async Task<GripperStates> GetGripperStatusAsync()
         {
-            return Transact(Protocol.GetPosition)
-                .Select(res => res.ToPosition());
-        }
-        public IObservable<Polar> GetPolarAsync()
-        {
-            return Transact(Protocol.GetPolar)
-                .Select(res => res.ToPolar());
+            var res = await Transact(Protocol.GetGripperState);
+            return res.ToGripperState();
         }
 
-        public IObservable<PumpStates> GetPumpStatusAsync()
+        public Task<bool> GetLimitedSwitchStateAsync()
+            => BoolTransact(Protocol.GetLimitedSwitchState);
+        public Task<bool> GetDigitalPinStateAsync(int number)
+            => BoolTransact(string.Format(Protocol.GetDigitalPinValueFormat, number));
+
+        public async Task<float> GetAnalogPinStateAsync(int number)
         {
-            return Transact(Protocol.GetPumpState)
-                .Select(res => res.ToPumpState());
-        }
-        public IObservable<GripperStates> GetGripperStatusAsync()
-        {
-            return Transact(Protocol.GetGripperState)
-                .Select(res => res.ToGripperState());
+            var res = await Transact(string.Format(Protocol.GetAnalogPinValueFormat, number));
+            return res.ToFloat();
         }
 
-        public IObservable<bool> GetLimitedSwitchStateAsync()
+        public async Task<byte> ReadByteAsync(EEPROMDeviceType device, int addr)
         {
-            return Transact(Protocol.GetLimitedSwitchState)
-                .Select(res => res.ToBool());
-        }
-        public IObservable<bool> GetDigitalPinStateAsync(int number)
-        {
-            return Transact(string.Format(Protocol.GetDigitalPinValueFormat, number))
-                .Select(res => res.ToBool());
-        }
-        public IObservable<float> GetAnalogPinStateAsync(int number)
-        {
-            return Transact(string.Format(Protocol.GetAnalogPinValueFormat, number))
-                .Select(res => res.ToFloat());
-        }
-
-        public IObservable<byte> ReadByteAsync(EEPROMDeviceType device, int addr)
-        {
-            return Transact(
+            var res = await Transact(
                 string.Format(Protocol.ReadROMFormat, (int)device, addr, (int)EEPROMDataTypeCodes.Byte)
-                )
-                .Select(res => res.ToByte());
+                );
+            return res.ToByte();
         }
-        public IObservable<int> ReadIntAsync(EEPROMDeviceType device, int addr)
+        public async Task<int> ReadIntAsync(EEPROMDeviceType device, int addr)
         {
-            return Transact(
+            var res = await Transact(
                 string.Format(Protocol.ReadROMFormat, (int)device, addr, (int)EEPROMDataTypeCodes.Integer)
-                )
-                .Select(res => res.ToInt());
+                );
+            return res.ToInt();
         }
-        public IObservable<float> ReadFloatAsync(EEPROMDeviceType device, int addr)
+        public async Task<float> ReadFloatAsync(EEPROMDeviceType device, int addr)
         {
-            return Transact(
+            var res = await Transact(
                 string.Format(Protocol.ReadROMFormat, (int)device, addr, (int)EEPROMDataTypeCodes.Float)
-                )
-                .Select(res => res.ToFloat());
+                );
+            return res.ToFloat();
         }
 
-        public IObservable<Unit> WriteByteAsync(EEPROMDeviceType device, int addr, byte data)
-        {
-            return SetCommandTransact(
-                string.Format(Protocol.WriteROMFormat, (int)device, addr, (int)EEPROMDataTypeCodes.Byte, (int)data)
-                );
-        }
-        public IObservable<Unit> WriteIntAsync(EEPROMDeviceType device, int addr, int data)
-        {
-            return SetCommandTransact(
-                string.Format(Protocol.WriteROMFormat, (int)device, addr, (int)EEPROMDataTypeCodes.Integer, data)
-                );
-        }
-        public IObservable<Unit> WriteFloatAsync(EEPROMDeviceType device, int addr, float data)
-        {
-            return SetCommandTransact(
-                string.Format(Protocol.WriteROMFormat, (int)device, addr, (int)EEPROMDataTypeCodes.Float, data)
-                );
-        }
+        public Task WriteByteAsync(EEPROMDeviceType device, int addr, byte data)
+            => SetCommandTransact(
+            string.Format(Protocol.WriteROMFormat, (int)device, addr, (int)EEPROMDataTypeCodes.Byte, (int)data)
+            );
+        public Task WriteIntAsync(EEPROMDeviceType device, int addr, int data)
+            => SetCommandTransact(
+            string.Format(Protocol.WriteROMFormat, (int)device, addr, (int)EEPROMDataTypeCodes.Integer, data)
+            );
+        public Task WriteFloatAsync(EEPROMDeviceType device, int addr, float data)
+            => SetCommandTransact(
+            string.Format(Protocol.WriteROMFormat, (int)device, addr, (int)EEPROMDataTypeCodes.Float, data)
+            );
 
         //NOTE: Recordingのコマンドについては時間管理まわりの方針がついてないのでいったん作らない
 
@@ -210,19 +166,39 @@ namespace Baku.UArmDotNet
         //{
         //    throw new NotImplementedException();
         //}
-        private IObservable<UArmResponse> Transact(string command)
+        private Task<UArmResponse> Transact(string command)
+            => Connector.Transact(command);
+
+        private async Task SetCommandTransact(string command)
         {
-            throw new NotImplementedException();
+            var response = await Transact(command);
+
+            if (response.IsOK)
+            {
+                return;
+            }
+
+            throw UArmExceptionFactory.CreateExceptionFromResponse(response);
+        }
+        private async Task<string> GetInfoStringTransact(string command)
+        {
+            var response = await Transact(command);
+            if (response.IsOK)
+            {
+                return response.ToInfoString();
+            }
+            throw UArmExceptionFactory.CreateExceptionFromResponse(response);
+        }
+        private async Task<bool> BoolTransact(string command)
+        {
+            var response = await Transact(command);
+            if (response.IsOK)
+            {
+                return response.ToBool();
+            }
+            throw UArmExceptionFactory.CreateExceptionFromResponse(response);
         }
 
-        private IObservable<Unit> SetCommandTransact(string command)
-        {
-            return Transact(command).Select(res =>
-            {
-                if (res.IsOK) return Unit.Default;
-                throw UArmExceptionFactory.CreateExceptionFromResponse(res);
-            });
-        }
 
     }
 }
