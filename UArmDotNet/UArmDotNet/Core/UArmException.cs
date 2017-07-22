@@ -9,18 +9,24 @@ namespace Baku.UArmDotNet
         public UArmException(string message, Exception innerException) : base(message, innerException) { }
     }
 
-    public class UArmCommandException : UArmException
+    public class UArmErrorResponseException : UArmException
     {
-        public UArmCommandException() { }
-        public UArmCommandException(string message) : base(message) { }
-        public UArmCommandException(string message, Exception innerException) : base(message, innerException) { }
+        public UArmErrorResponseException() { }
+        public UArmErrorResponseException(string message) : base(message) { }
+        public UArmErrorResponseException(string message, Exception innerException) : base(message, innerException) { }
     }
+
+    public class UArmNoResponseException : UArmException
+    {
+        public UArmNoResponseException() { }
+    }
+
 
     public static class UArmExceptionFactory
     {
-        public static UArmCommandException CreateExceptionFromResponse(UArmResponse res)
+        public static UArmErrorResponseException CreateExceptionFromResponse(UArmResponse res)
         {
-            throw new NotImplementedException();
+            return new UArmErrorResponseException($"ID:{res.Id}, Args=" + string.Join(", ", res.Args));
         }
     }
 

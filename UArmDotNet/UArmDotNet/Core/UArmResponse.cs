@@ -2,7 +2,6 @@
 
 namespace Baku.UArmDotNet
 {
-
     public class UArmResponse
     {
         public UArmResponse(int id, string[] args)
@@ -19,13 +18,7 @@ namespace Baku.UArmDotNet
 
         /// <summary>Get whether the response means 'OK' or not.</summary>
         public bool IsOK
-        {
-            get
-            {
-                return (Args.Length > 1) && Args[1].StartsWith(Protocol.OK);
-            }
-        }
-
+            => (Args.Length > 0) && Args[0].StartsWith(Protocol.OK);
 
         /// <summary>Convert to some information string, if subject to UArm serial data's appropriate format</summary>
         /// <returns>Converted bool value, or <see cref="FormatException"/> will be thrown.</returns>
@@ -154,7 +147,7 @@ namespace Baku.UArmDotNet
                 case (int)PumpStates.Grabbing:
                     return (PumpStates)res;
                 default:
-                    throw new UArmCommandException();
+                    throw new UArmErrorResponseException();
             }
         }
 
@@ -173,7 +166,7 @@ namespace Baku.UArmDotNet
                 case (int)GripperStates.Grabbing:
                     return (GripperStates)res;
                 default:
-                    throw new UArmCommandException();
+                    throw new UArmErrorResponseException();
             }
         }
     }

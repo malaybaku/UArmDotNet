@@ -9,9 +9,8 @@
             Height = height;
         }
 
-        public float Stretch { get; private set; }
-        public float Rotation { get; private set; }
-        public float Height { get; private set; }
-
+        public float Stretch { get; }
+        public float Rotation { get; }
+        public float Height { get; }
     }
 }

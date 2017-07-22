@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO.Ports;
+using System.Linq;
 
 namespace Baku.UArmDotNet
 {
@@ -31,10 +32,18 @@ namespace Baku.UArmDotNet
             set { _serial.PortName = value; }
         }
 
+        public int BaudRate
+        {
+            get { return _serial.BaudRate; }
+            set { _serial.BaudRate = value; }
+        }
+
         public bool IsConnected => _serial.IsOpen; 
 
         public void Connect()
         {
+            if (IsConnected) { return; }
+
             _serial.Open();
             if (IsConnected)
             {
@@ -60,10 +69,7 @@ namespace Baku.UArmDotNet
             _serial.Write(command, 0, command.Length);
         }
 
-        public void Dispose()
-        {
-            Disconnect();
-        }
+        public void Dispose() => Disconnect();
 
         private void OnReceived(byte[] data)
         {
@@ -74,28 +80,44 @@ namespace Baku.UArmDotNet
 
         private void StartSerialReceive()
         {
-            //TODO: BeginReadのレスポンスでCloseを検知できる？？
-            byte[] buf = new byte[SerialBlockSizeLimit];
-
             Action actReceive = null;
-            actReceive = () =>
+            actReceive = async () =>
             {
-                _serial.BaseStream.BeginRead(buf, 0, buf.Length, ar =>
+                byte[] buf = new byte[SerialBlockSizeLimit];
+                int totalDataLen = 0;
+                while (true)
                 {
-                    int actualLen = _serial.BaseStream.EndRead(ar);
-                    if (actualLen > 0)
+                    int len = await _serial.BaseStream.ReadAsync(buf, totalDataLen, buf.Length - totalDataLen);
+                    if (len > 0)
                     {
-                        byte[] received = new byte[actualLen];
-                        Array.Copy(buf, 0, received, 0, received.Length);
-                        OnReceived(received);
+                        totalDataLen += len;
                     }
-                    //NOTE: 少なくとも接続切れた場合はもう諦める(リーク防止を重視)
-                    if (IsConnected)
+                    else
                     {
-                        actReceive();
+                        //接続断っぽいので打ち切り
+                        break;
                     }
-                }, null);
+                    //改行文字で区切るというuArmのルールをここに入れる。設計上あんまりよくないが
+                    if (buf.Contains((byte)'\n'))
+                    {
+                        break;
+                    }
+                }
+
+                if (totalDataLen > 0)
+                {
+                    byte[] received = new byte[totalDataLen];
+                    Array.Copy(buf, 0, received, 0, received.Length);
+                    OnReceived(received);
+                }
+
+                //NOTE: 少なくとも接続切れた場合はもう諦める(リーク防止を重視)
+                if (IsConnected)
+                {
+                    actReceive();
+                }
             };
+            actReceive();
 
         }
 

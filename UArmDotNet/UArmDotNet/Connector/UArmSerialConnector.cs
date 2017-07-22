@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,10 +18,13 @@ namespace Baku.UArmDotNet
         public UArmConnector() : this(new SerialRobotConnector())
         {
         }
-
-        public SerialRobotConnector SerialConnector { get; }
         private readonly Dictionary<int, CancellationTokenSource> _pendingCommandIds = new Dictionary<int, CancellationTokenSource>();
         private readonly Dictionary<int, UArmResponse> _responses = new Dictionary<int, UArmResponse>();
+
+        public SerialRobotConnector SerialConnector { get; }
+
+        public event EventHandler<UArmResponseEventArgs> ReceivedResponse;
+        public event EventHandler<UArmEventMessageEventArgs> ReceivedEvent;
 
         /// <summary>
         /// Get or set the minimum post interval [ms], default is 100.
@@ -45,7 +49,14 @@ namespace Baku.UArmDotNet
 
             PostImpl(id, command);
 
-            await t;
+            try
+            {
+                await t;
+            }
+            catch(TaskCanceledException)
+            {
+                //何もしない: キャンセルしたら正常系なので。
+            }
 
             if (_responses.ContainsKey(id))
             {
@@ -64,7 +75,10 @@ namespace Baku.UArmDotNet
         public void Post(string command)
             => PostImpl(GenerateCommandId(), command);
 
-        public event EventHandler<UArmResponseEventArgs> Received;
+        public void PostWithoutId(string command)
+        {
+            SerialConnector.Post(Encoding.ASCII.GetBytes(command + "\n"));
+        }
 
         private void PostImpl(int id, string command)
         {
@@ -74,35 +88,65 @@ namespace Baku.UArmDotNet
 
         private void OnDataReceived(object sender, SerialDataReceivedEventArgs e)
         {
-            string[] data = Encoding.ASCII
+            //エラー後の通信などで2つ分のレスポンスがまとめて飛んでくることがあるので、区切って処理する
+            foreach (string line in Encoding.ASCII
                 .GetString(e.Data)
-                .TrimEnd('\n')
-                .Split(' ');
-
-            int id = -1;
-            if (data.Length > 1 && int.TryParse(data[0], out id))
+                .Split('\n')
+                .Where(s => !string.IsNullOrEmpty(s))
+                .Select(s => s.Trim('\r', '\n'))
+                )
             {
-                //正常受信
-                //返信待ちあったらマジメにやっていきます
+                OnLineReceived(line);
+            }
+        }
+        private void OnLineReceived(string line)
+        {
+            string[] data = line.Split(' ');
+
+            //begin with "@": treat as event message
+            int eventId = 0;
+            if (data.Length > 0 &&
+                data[0].Length > 1 &&
+                data[0][0] == '@' &&
+                int.TryParse(data[0].Substring(1), out eventId)
+                )
+            {
+                var args = new string[data.Length - 1];
+                Array.Copy(data, 1, args, 0, args.Length);
+                var eventMessage = new UArmEventMessage(eventId, args);
+                ReceivedEvent?.Invoke(this, new UArmEventMessageEventArgs(eventMessage));
+
+                return;
+            }
+
+            //begin with "$": treas as response
+            int id = -1;
+            if (data.Length > 1 &&
+                data[0].Length > 1 &&
+                data[0][0] == '$' &&
+                int.TryParse(data[0].Substring(1), out id))
+            {
                 var args = new string[data.Length - 1];
                 Array.Copy(data, 1, args, 0, args.Length);
                 var response = new UArmResponse(id, args);
 
-                //返信待ちしてたら待ち完了させる
+                //Terminate waiting process if pending exists
                 if (_pendingCommandIds.ContainsKey(id))
                 {
                     _responses[id] = response;
                     _pendingCommandIds[id].Cancel();
                 }
 
-                Received?.Invoke(this, new UArmResponseEventArgs(response));
+                ReceivedResponse?.Invoke(this, new UArmResponseEventArgs(response));
+
+                return;
             }
-            else
-            {
-                //受信段階で何かしらコケた
-                throw new UArmException();
-            }            
+
+
+            //Unknown data
         }
+
+
         private void OnDisconnected(object sender, EventArgs e)
         {
             _responses.Clear();
@@ -112,7 +156,6 @@ namespace Baku.UArmDotNet
             }
             _pendingCommandIds.Clear();
         }
-
 
         private static int _commandId = 0;
         private static readonly object _generateIdLock = new object();
@@ -130,12 +173,21 @@ namespace Baku.UArmDotNet
 
     public class UArmResponseEventArgs : EventArgs
     {
-        public UArmResponseEventArgs(UArmResponse data)
+        public UArmResponseEventArgs(UArmResponse response)
         {
-            Data = data;
+            Response = response;
         }
 
-        public UArmResponse Data { get; }
+        public UArmResponse Response { get; }
+    }
+
+    public class UArmEventMessageEventArgs : EventArgs
+    {
+        public UArmEventMessageEventArgs(UArmEventMessage eventMessage)
+        {
+            EventMessage = eventMessage;
+        }
+        public UArmEventMessage EventMessage { get; }
     }
 
 }

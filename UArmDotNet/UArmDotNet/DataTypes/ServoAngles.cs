@@ -12,10 +12,10 @@ namespace Baku.UArmDotNet
             J3 = j3;
         }
 
-        public float J0 { get; private set; }
-        public float J1 { get; private set; }
-        public float J2 { get; private set; }
-        public float J3 { get; private set; }
+        public float J0 { get; }
+        public float J1 { get; }
+        public float J2 { get; }
+        public float J3 { get; }
 
         public float this[int i]
         {

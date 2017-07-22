@@ -49,4 +49,26 @@
         Integer = 2,
         Float = 4,
     }
+
+    public enum ArmModes
+    {
+        Normal = 0,
+        Laser = 1,
+        Printing = 2,
+        UniversalHolder = 3
+    }
+
+    public enum ButtonTypes
+    {
+        MenuButton = 0,
+        PlayButton = 1,
+    }
+
+    public enum ButtonActionTypes
+    {
+        Click = 1,
+        LongPress = 2,
+    }
+
+
 }

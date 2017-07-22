@@ -6,11 +6,11 @@ using System.Text.RegularExpressions;
 namespace Baku.UArmDotNet
 {
     /// <summary> UArmの接続状態を確認するメソッドを提供します。 </summary>
-    public static class DeviceConnectionChecker
+    public static class UArmSearch
     {
         /// <summary>Get available serial port names with "COMx"</summary>
         /// <returns>利用可能な接続済みのUArm一覧</returns>
-        public static IEnumerable<string> GetUArmPortNames()
+        public static IEnumerable<string> SearchPortNames()
         {
             var pnpEntity = new ManagementClass("Win32_PnPEntity");
             var comRegex = new Regex(@"\(COM[1-9][0-9]?[0-9]?\)"); // example: "(COM3)"
