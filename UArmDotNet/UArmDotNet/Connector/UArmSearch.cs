@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿#if !UNITY_EDITOR && !UNITY_STANDALONE
+using System.Collections.Generic;
 using System.Linq;
 using System.Management;
 using System.Text.RegularExpressions;
@@ -28,3 +29,4 @@ namespace Baku.UArmDotNet
         }
     }
 }
+#endif
