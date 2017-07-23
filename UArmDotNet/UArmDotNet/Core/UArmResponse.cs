@@ -119,7 +119,7 @@ namespace Baku.UArmDotNet
         /// <exception cref="FormatException"/>
         public ServoAngles ToServoAngles()
         {
-            if (Args.Length < 5)
+            if (Args.Length < 4)
             {
                 throw new FormatException();
             }
@@ -127,8 +127,7 @@ namespace Baku.UArmDotNet
             return new ServoAngles(
                 float.Parse(Args[1].Substring(1)),
                 float.Parse(Args[2].Substring(1)),
-                float.Parse(Args[3].Substring(1)),
-                float.Parse(Args[4].Substring(1))
+                float.Parse(Args[3].Substring(1))
                 );
         }
 

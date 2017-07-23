@@ -23,6 +23,10 @@ namespace Baku.UArmDotNet
 
         public SerialRobotConnector SerialConnector { get; }
 
+        //RawData events are for debugging.
+        public event EventHandler<UArmRawMessageEventArgs> ReceivedRawData;
+        public event EventHandler<UArmRawMessageEventArgs> SendRawData;
+
         public event EventHandler<UArmResponseEventArgs> ReceivedResponse;
         public event EventHandler<UArmEventMessageEventArgs> ReceivedEvent;
 
@@ -55,7 +59,7 @@ namespace Baku.UArmDotNet
             }
             catch(TaskCanceledException)
             {
-                //何もしない: キャンセルしたら正常系なので。
+                //何もしない: キャンセルは正常系
             }
 
             if (_responses.ContainsKey(id))
@@ -82,8 +86,10 @@ namespace Baku.UArmDotNet
 
         private void PostImpl(int id, string command)
         {
-            byte[] cmd = Encoding.ASCII.GetBytes($"#{id} {command}\n");
+            string commandWithId = $"#{id} {command}";
+            byte[] cmd = Encoding.ASCII.GetBytes(commandWithId + "\n");
             SerialConnector.Post(cmd);
+            SendRawData?.Invoke(this, new UArmRawMessageEventArgs(commandWithId));
         }
 
         private void OnDataReceived(object sender, SerialDataReceivedEventArgs e)
@@ -96,6 +102,7 @@ namespace Baku.UArmDotNet
                 .Select(s => s.Trim('\r', '\n'))
                 )
             {
+                ReceivedRawData?.Invoke(this, new UArmRawMessageEventArgs(line));
                 OnLineReceived(line);
             }
         }
@@ -170,6 +177,17 @@ namespace Baku.UArmDotNet
         }
 
     }
+
+    public class UArmRawMessageEventArgs : EventArgs
+    {
+        public UArmRawMessageEventArgs(string rawData)
+        {
+            RawData = rawData;
+        }
+
+        public string RawData { get; }
+    }
+
 
     public class UArmResponseEventArgs : EventArgs
     {

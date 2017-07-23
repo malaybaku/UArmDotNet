@@ -9,7 +9,7 @@ namespace Baku.UArmDotNet
         Task MoveAsync(Position position, float speed);
         Task MoveWithLaserOnAsync(Position position, float speed);
         Task MoveAsync(Polar polar, float speed);
-        Task SetServoAsync(Servos servo, float angle);
+        Task MoveServoAngleAsync(Servos servo, float angle);
         Task MoveRelativeAsync(Position displacement, float speed);
         Task MoveRelativeAsync(Polar polarDisplacement, float speed);
 
@@ -17,12 +17,12 @@ namespace Baku.UArmDotNet
         Task AttachAllMotorAsync();
         Task DetachAllMotorAsync();
         //NOTE: 戻り値相当の情報はイベントでしか飛んでこないので非同期にしない
-        void SetFeedbackCycleAsync(float durationSec);
+        Task SetFeedbackCycleAsync(float durationSec);
         Task<bool> CheckIsMovingAsync();
         Task AttachMotorAsync(Servos servo);
         Task DetachMotorAsync(Servos servo);
         Task<bool> CheckMotorAttachedAsync(Servos servo);
-        Task BeepAsync(int frequency, float durationSec);
+        Task BeepAsync(int frequency, int durationMillisec);
 
         Task<byte> ReadByteAsync(EEPROMDeviceType device, int addr);
         Task<int> ReadIntAsync(EEPROMDeviceType device, int addr);
@@ -39,21 +39,25 @@ namespace Baku.UArmDotNet
         Task<bool> CanReachAsync(Polar polar);
         Task SetPumpStateAsync(bool active);
         Task SetGripperStateAsync(bool active);
-        Task SetBluetoothState(bool active);
+        Task SetBluetoothStateAsync(bool active);
         Task SetDigitalPinOutputAsync(int number, bool high);
 
         Task SetBluetoothNameAsync(string name);
 
         Task SetArmModeAsync(ArmModes mode);
+        Task UpdateReferencePoint();
+        Task UpdateHeightZeroPoint();
+        Task SetEndEffectorHeight(float height);
 
 
         //Query Command
-        Task<ServoAngles> GetServoAnglesAsync();
+        Task<ServoAngles> GetAllServoAnglesAsync();
         Task<string> GetDeviceNameAsync();
         Task<string> GetHardwareVersionAsync();
         Task<string> GetSoftwareVersionAsync();
         Task<string> GetAPIVersionAsync();
         Task<string> GetUIDAsync();
+        Task<float> GetServoAngleAsync(Servos servo);
 
         Task<Position> GetPositionAsync();
         Task<Polar> GetPolarAsync();
@@ -78,11 +82,13 @@ namespace Baku.UArmDotNet
 
     public class PositionFeedbackEventArgs : EventArgs
     {
-        public PositionFeedbackEventArgs(Position position)
+        public PositionFeedbackEventArgs(Position position, float handAngle)
         {
             Position = position;
+            HandAngle = handAngle;
         }
         public Position Position { get; }
+        public float HandAngle { get; }
     }
 
     public class ButtonActionEventArgs : EventArgs

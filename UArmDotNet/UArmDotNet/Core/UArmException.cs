@@ -16,6 +16,9 @@ namespace Baku.UArmDotNet
         public UArmErrorResponseException(string message, Exception innerException) : base(message, innerException) { }
     }
 
+    /// <summary>
+    /// (not used currently) exception which indicates there is no response message
+    /// </summary>
     public class UArmNoResponseException : UArmException
     {
         public UArmNoResponseException() { }

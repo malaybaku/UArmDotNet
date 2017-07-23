@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.IO.Ports;
 using System.Linq;
 
@@ -87,20 +88,28 @@ namespace Baku.UArmDotNet
                 int totalDataLen = 0;
                 while (true)
                 {
-                    int len = await _serial.BaseStream.ReadAsync(buf, totalDataLen, buf.Length - totalDataLen);
-                    if (len > 0)
+                    try
                     {
-                        totalDataLen += len;
+                        int len = await _serial.BaseStream.ReadAsync(buf, totalDataLen, buf.Length - totalDataLen);
+                        if (len > 0)
+                        {
+                            totalDataLen += len;
+                        }
+                        else
+                        {
+                            //接続断っぽいので打ち切り
+                            return;
+                        }
+                        //改行文字で区切る: これはuArmの知識入ってる
+                        if (buf.Contains((byte)'\n'))
+                        {
+                            break;
+                        }
                     }
-                    else
+                    catch (IOException)
                     {
-                        //接続断っぽいので打ち切り
-                        break;
-                    }
-                    //改行文字で区切るというuArmのルールをここに入れる。設計上あんまりよくないが
-                    if (buf.Contains((byte)'\n'))
-                    {
-                        break;
+                        //スレッドの停止などで終了した場合
+                        return;
                     }
                 }
 

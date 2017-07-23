@@ -9,14 +9,22 @@ namespace Baku.UArmDotNet
         public UArm(UArmConnector connector)
         {
             Connector = connector;
+            Connector.ReceivedEvent += OnReceivedEvent;
         }
+
         public UArm(string portName, int baudRate) : this(new UArmConnector())
         {
             Connector.SerialConnector.PortName = portName;
             Connector.SerialConnector.BaudRate = baudRate;
         }
+        public UArm(string portName) : this (portName, DefaultBaudRate)
+        {
+        }
 
         public UArmConnector Connector { get; }
+
+        /// <summary>Default baud rate of the uArm Swift / uArm Swift Pro</summary>
+        public static readonly int DefaultBaudRate = 115200;
 
         //Motion
         public Task MoveAsync(Position position, float speed)
@@ -31,7 +39,7 @@ namespace Baku.UArmDotNet
             => SetCommandTransact(
             string.Format(Protocol.MovePolarFormat, polar.Stretch, polar.Rotation, polar.Height, speed)
             );
-        public Task SetServoAsync(Servos servo, float angle)
+        public Task MoveServoAngleAsync(Servos servo, float angle)
             => SetCommandTransact(string.Format(Protocol.MoveServoFormat, (int)servo, angle));
         public Task MoveRelativeAsync(Position positionDisplacement, float speed)
             => SetCommandTransact(string.Format(
@@ -55,8 +63,8 @@ namespace Baku.UArmDotNet
             => SetCommandTransact(Protocol.AttachAllMotor);
         public Task DetachAllMotorAsync()
             => SetCommandTransact(Protocol.DetachAllMotor);
-        public void SetFeedbackCycleAsync(float durationSec)
-            => Connector.Post(string.Format(Protocol.SetFeedbackFormat, durationSec));
+        public Task SetFeedbackCycleAsync(float durationSec)
+            => SetCommandTransact(string.Format(Protocol.SetFeedbackFormat, durationSec));
         public Task<bool> CheckIsMovingAsync()
             => BoolTransact(Protocol.CheckIsMoving);
         public Task AttachMotorAsync(Servos servo)
@@ -65,8 +73,8 @@ namespace Baku.UArmDotNet
             => SetCommandTransact(string.Format(Protocol.DetachMotorFormat, (int)servo));
         public Task<bool> CheckMotorAttachedAsync(Servos servo)
             => BoolTransact(string.Format(Protocol.CheckMotorAttachedFormat, (int)servo));
-        public Task BeepAsync(int frequency, float durationSec)
-            => SetCommandTransact(string.Format(Protocol.BeepFormat, frequency, durationSec));
+        public Task BeepAsync(int frequency, int durationMillisec)
+            => SetCommandTransact(string.Format(Protocol.BeepFormat, frequency, durationMillisec));
 
         public async Task<byte> ReadByteAsync(EEPROMDeviceType device, int addr)
         {
@@ -114,7 +122,7 @@ namespace Baku.UArmDotNet
         }
         public async Task<Position> GetFKAsync(ServoAngles angles)
         {
-            var res = await Transact(string.Format(Protocol.GetFKFormat, angles.J0, angles.J1, angles.J2));
+            var res = await Transact(string.Format(Protocol.GetFKFormat, angles.Bottom, angles.Left, angles.Right));
             return res.ToPosition();
         }
 
@@ -131,7 +139,7 @@ namespace Baku.UArmDotNet
             => SetCommandTransact(
                 string.Format(Protocol.SetGripperStateFormat, (active ? 1 : 0))
             );
-        public Task SetBluetoothState(bool active)
+        public Task SetBluetoothStateAsync(bool active)
             => SetCommandTransact(
                 string.Format(Protocol.EnableBluetoothFormat, (active ? 1 : 0))
             );
@@ -166,11 +174,19 @@ namespace Baku.UArmDotNet
             => SetCommandTransact(
                 string.Format(Protocol.SetModeOfTheArmFormat, (int)mode)
             );
+        public Task UpdateReferencePoint()
+            => SetCommandTransact(Protocol.SetReferencePositionByCurrentPosition);
+        public Task UpdateHeightZeroPoint()
+            => SetCommandTransact(Protocol.SetHeightZeroPoint);
+        public Task SetEndEffectorHeight(float height)
+            => SetCommandTransact(
+                string.Format(Protocol.SetTheHeightOfEndEffectorFormat, height)
+                );
 
         //Read
-        public async Task<ServoAngles> GetServoAnglesAsync()
+        public async Task<ServoAngles> GetAllServoAnglesAsync()
         {
-            var res = await Transact(Protocol.GetServoAngle);
+            var res = await Transact(Protocol.GetAllServoAngles);
             return res.ToServoAngles();
         }
         public Task<string> GetDeviceNameAsync()
@@ -183,6 +199,16 @@ namespace Baku.UArmDotNet
             => GetInfoStringTransact(Protocol.GetAPIVersion);
         public Task<string> GetUIDAsync()
             => GetInfoStringTransact(Protocol.GetUID);
+        public async Task<float> GetServoAngleAsync(Servos servo)
+        {
+            if (servo == Servos.Hand) { throw new ArgumentException("Only Bottom, Left, Right joint angle can be read"); }
+
+            var res = await Transact(
+                string.Format(Protocol.GetServoAngleFormat, (int)servo)
+                );
+
+            return res.ToFloat();
+        }
 
         public async Task<Position> GetPositionAsync()
         {
@@ -222,9 +248,19 @@ namespace Baku.UArmDotNet
             return res.ToServoAngles();
         }
 
+        /// <summary>Occurs when robot is ready</summary>
+        public event EventHandler ReceivedReady;
+
+        /// <summary>Occurs when received position feedback</summary>
         public event EventHandler<PositionFeedbackEventArgs> ReceivedPositionFeedback;
+
+        /// <summary>Occurs when received button action</summary>
         public event EventHandler<ButtonActionEventArgs> ReceivedButtonAction;
+
+        /// <summary>Occurs when power connection state changed</summary>
         public event EventHandler<PowerConnectionChangedEventArgs> PowerConnectionChanged;
+
+        /// <summary>Occurs when limited switch status changed</summary>
         public event EventHandler<LimitedSwitchEventArgs> LimitedSwitchStateChanged;
 
         //NOTE: Recordingのコマンドについては時間管理まわりの方針がついてないのでいったん作らない
@@ -266,6 +302,107 @@ namespace Baku.UArmDotNet
             throw UArmExceptionFactory.CreateExceptionFromResponse(response);
         }
 
+        private void OnReceivedEvent(object sender, UArmEventMessageEventArgs e)
+        {
+            CheckReceivedReady(e.EventMessage);
+            CheckReceivedPositionFeedback(e.EventMessage);
+            CheckReceivedButtonAction(e.EventMessage);
+            CheckPowerConnectionChanged(e.EventMessage);
+            CheckLimitedSwitchStateChanged(e.EventMessage);
+            switch(e.EventMessage.Id)
+            {
+                case 6:
+                    int switchNumber;
+                    int switchState;
+                    if (e.EventMessage.Args.Length > 1 &&
+                        int.TryParse(e.EventMessage.Args[0], out switchNumber) &&
+                        int.TryParse(e.EventMessage.Args[1], out switchState)
+                        )
+                    {
+                        LimitedSwitchStateChanged?.Invoke(
+                            this,
+                            new LimitedSwitchEventArgs(switchNumber, switchState != 0)
+                            );
+                    }
+                    return;
+                default:
+                    //フォーマット不正だけどいったん無視
+                    return;
+            }
+        }
+
+        private void CheckReceivedReady(UArmEventMessage message)
+        {
+            if (message.Id == Protocol.EventIdReady)
+            {
+                ReceivedReady?.Invoke(this, EventArgs.Empty);
+            }
+        }
+        private void CheckReceivedPositionFeedback(UArmEventMessage message)
+        {
+            float x, y, z, handAngle;
+            if (message.Id == Protocol.EventIdTimedFeedback &&
+                message.Args.Length > 3 &&
+                float.TryParse(message.Args[0].Substring(1), out x) &&
+                float.TryParse(message.Args[1].Substring(1), out y) &&
+                float.TryParse(message.Args[2].Substring(1), out z) && 
+                float.TryParse(message.Args[3].Substring(1), out handAngle)
+                )
+            {
+                ReceivedPositionFeedback?.Invoke(
+                    this,
+                    new PositionFeedbackEventArgs(new Position(x, y, z), handAngle)
+                    );
+            }
+        }
+        private void CheckReceivedButtonAction(UArmEventMessage message)
+        {
+            int buttonType;
+            int buttonActionType;
+
+            if (message.Id == Protocol.EventIdButton && 
+                message.Args.Length > 1 &&
+                int.TryParse(message.Args[0].Substring(1), out buttonType) &&
+                int.TryParse(message.Args[1].Substring(1), out buttonActionType)
+                )
+            {
+                ReceivedButtonAction?.Invoke(
+                    this,
+                    new ButtonActionEventArgs((ButtonTypes)buttonType, (ButtonActionTypes)buttonActionType)
+                    );
+            }
+        }
+        private void CheckPowerConnectionChanged(UArmEventMessage message)
+        {
+            int powerState;
+
+            if (message.Id == Protocol.EventIdPowerConnection &&
+                message.Args.Length > 0 &&
+                int.TryParse(message.Args[0].Substring(1), out powerState)
+                )
+            {
+                PowerConnectionChanged?.Invoke(
+                    this,
+                    new PowerConnectionChangedEventArgs(powerState != 0)
+                    );
+            }
+        }
+        private void CheckLimitedSwitchStateChanged(UArmEventMessage message)
+        {
+            int switchNumber;
+            int switchState;
+            if (message.Id == Protocol.EventIdLimitedSwitch && 
+                message.Args.Length > 1 &&
+                int.TryParse(message.Args[0].Substring(1), out switchNumber) &&
+                int.TryParse(message.Args[1].Substring(1), out switchState)
+                )
+            {
+                LimitedSwitchStateChanged?.Invoke(
+                    this,
+                    new LimitedSwitchEventArgs(switchNumber, switchState != 0)
+                    );
+            }
+        }
 
     }
 }

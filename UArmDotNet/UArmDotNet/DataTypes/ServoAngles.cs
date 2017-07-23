@@ -4,31 +4,29 @@ namespace Baku.UArmDotNet
 {
     public class ServoAngles
     {
-        public ServoAngles(float j0, float j1, float j2, float j3)
+        public ServoAngles(float bottom, float left, float right)
         {
-            J0 = j0;
-            J1 = j1;
-            J2 = j2;
-            J3 = j3;
+            Bottom = bottom;
+            Left = left;
+            Right = right;
         }
 
-        public float J0 { get; }
-        public float J1 { get; }
-        public float J2 { get; }
-        public float J3 { get; }
+        public float Bottom { get; }
+        public float Left { get; }
+        public float Right { get; }
 
         public float this[int i]
         {
             get
             {
-                if (i < 0 || i > 3) throw new IndexOutOfRangeException();
+                if (i < 0 || i > 2) throw new IndexOutOfRangeException();
 
-                return (i == 0) ? J0 :
-                    (i == 1) ? J1 :
-                    (i == 2) ? J2 :
-                    J3;
+                return (i == 0) ? Bottom :
+                    (i == 1) ? Left :
+                    Right;
             }
         }
 
+        public override string ToString() => $"B:{Bottom:0.##}, L:{Left:0.##}, R:{Right:0.##}";
     }
 }

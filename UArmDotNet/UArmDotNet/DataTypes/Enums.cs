@@ -50,6 +50,7 @@
         Float = 4,
     }
 
+    /// <summary>Modes of the arm</summary>
     public enum ArmModes
     {
         Normal = 0,
@@ -58,12 +59,14 @@
         UniversalHolder = 3
     }
 
+    /// <summary>Types of the button to which some action happened</summary>
     public enum ButtonTypes
     {
         MenuButton = 0,
         PlayButton = 1,
     }
 
+    /// <summary>Types of the button action</summary>
     public enum ButtonActionTypes
     {
         Click = 1,
