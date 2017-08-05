@@ -93,7 +93,7 @@ namespace Baku.UArmDotNet
                     }
 
                     //とりあえず積み上げ
-                    stringBuf.Append(Encoding.ASCII.GetString(buf));
+                    stringBuf.Append(Encoding.ASCII.GetString(buf, 0, len));
                 }
                 catch (IOException)
                 {
