@@ -92,19 +92,17 @@ namespace Baku.UArmDotNet
             SendRawData?.Invoke(this, new UArmRawMessageEventArgs(commandWithId));
         }
 
-        private void OnDataReceived(object sender, SerialDataReceivedEventArgs e)
+        private void OnDataReceived(object sender, SerialDataLineReceivedEventArgs e)
         {
-            //エラー後の通信などで2つ分のレスポンスがまとめて飛んでくることがあるので、区切って処理する
-            foreach (string line in Encoding.ASCII
-                .GetString(e.Data)
-                .Split('\n')
-                .Where(s => !string.IsNullOrEmpty(s))
-                .Select(s => s.Trim('\r', '\n'))
-                )
+            //念のため改行文字を消す: \r\n の対策
+            string line = e.Line?.Trim('\r', '\n') ?? "";
+
+            if (string.IsNullOrEmpty(line))
             {
-                ReceivedRawData?.Invoke(this, new UArmRawMessageEventArgs(line));
-                OnLineReceived(line);
+                return;
             }
+            ReceivedRawData?.Invoke(this, new UArmRawMessageEventArgs(line));
+            OnLineReceived(line);
         }
         private void OnLineReceived(string line)
         {

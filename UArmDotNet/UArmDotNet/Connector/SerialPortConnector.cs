@@ -2,6 +2,7 @@
 using System.IO;
 using System.IO.Ports;
 using System.Linq;
+using System.Text;
 
 namespace Baku.UArmDotNet
 {
@@ -10,7 +11,7 @@ namespace Baku.UArmDotNet
     {
         private readonly SerialPort _serial = new SerialPort();
 
-        public event EventHandler<SerialDataReceivedEventArgs> Received;
+        public event EventHandler<SerialDataLineReceivedEventArgs> Received;
         public event EventHandler Disconnected;
 
         public int TimeoutMillisec
@@ -72,52 +73,46 @@ namespace Baku.UArmDotNet
 
         public void Dispose() => Disconnect();
 
-        private void OnReceived(byte[] data)
-        {
-            byte[] bin = new byte[data.Length];
-            Array.Copy(data, bin, data.Length);
-            Received?.Invoke(this, new SerialDataReceivedEventArgs(bin));
-        }
+        private void OnReceived(string line)
+            => Received?.Invoke(this, new SerialDataLineReceivedEventArgs(line));
 
         private void StartSerialReceive()
         {
             Action actReceive = null;
+            StringBuilder stringBuf = new StringBuilder();
             actReceive = async () =>
             {
                 byte[] buf = new byte[SerialBlockSizeLimit];
-                int totalDataLen = 0;
-                while (true)
+                try
                 {
-                    try
+                    int len = await _serial.BaseStream.ReadAsync(buf, 0, buf.Length);
+                    if (len == 0)
                     {
-                        int len = await _serial.BaseStream.ReadAsync(buf, totalDataLen, buf.Length - totalDataLen);
-                        if (len > 0)
-                        {
-                            totalDataLen += len;
-                        }
-                        else
-                        {
-                            //接続断っぽいので打ち切り
-                            return;
-                        }
-                        //改行文字で区切る: これはuArmの知識入ってる
-                        if (buf.Contains((byte)'\n'))
-                        {
-                            break;
-                        }
-                    }
-                    catch (IOException)
-                    {
-                        //スレッドの停止などで終了した場合
+                        //接続断っぽいので打ち切る
                         return;
                     }
+
+                    //とりあえず積み上げ
+                    stringBuf.Append(Encoding.ASCII.GetString(buf));
+                }
+                catch (IOException)
+                {
+                    //スレッドの停止などで終了した場合も打ち切り
+                    return;
                 }
 
-                if (totalDataLen > 0)
+                //バッファから改行で千切って投げる
+                while(true)
                 {
-                    byte[] received = new byte[totalDataLen];
-                    Array.Copy(buf, 0, received, 0, received.Length);
-                    OnReceived(received);
+                    string current = stringBuf.ToString();
+                    if (!current.Contains('\n'))
+                    {
+                        break;
+                    }
+
+                    string line = current.Split('\n')[0];
+                    stringBuf.Remove(0, line.Length + 1);
+                    OnReceived(line);
                 }
 
                 //NOTE: 少なくとも接続切れた場合はもう諦める(リーク防止を重視)
@@ -133,14 +128,13 @@ namespace Baku.UArmDotNet
         private const int SerialBlockSizeLimit = 1024;
     }
 
-    public class SerialDataReceivedEventArgs : EventArgs
+    public class SerialDataLineReceivedEventArgs : EventArgs
     {
-        public SerialDataReceivedEventArgs(byte[] data)
+        public SerialDataLineReceivedEventArgs(string line)
         {
-            Data = new byte[data.Length];
-            Array.Copy(data, Data, data.Length);
+            Line = line;
         }
 
-        public byte[] Data { get; }
+        public string Line { get; }
     }
 }
