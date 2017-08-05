@@ -393,14 +393,14 @@ namespace ExampleUArmDotNet
                 if (string.Compare("F", line, true) == 0)
                 {
                     Console.WriteLine("start feedback");
-                    await uArm.SetFeedbackCycleAsync(1.0f);
+                    await uArm.StartFeedbackCycleAsync(1.0f);
                     Console.WriteLine("wait 5sec, and see the feedback example");
                     await Task.Delay(5000);
                 }
                 else if (string.Compare("D", line, true) == 0)
                 {
                     Console.WriteLine("stop feedback");
-                    await uArm.SetFeedbackCycleAsync(0.0f);
+                    await uArm.StartFeedbackCycleAsync(0.0f);
                 }
                 else
                 {

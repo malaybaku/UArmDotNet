@@ -63,8 +63,11 @@ namespace Baku.UArmDotNet
             => SetCommandTransact(Protocol.AttachAllMotor);
         public Task DetachAllMotorAsync()
             => SetCommandTransact(Protocol.DetachAllMotor);
-        public Task SetFeedbackCycleAsync(float durationSec)
-            => SetCommandTransact(string.Format(Protocol.SetFeedbackFormat, durationSec));
+        public Task StartFeedbackCycleAsync(float intervalSec)
+            => SetCommandTransact(string.Format(Protocol.SetFeedbackFormat, intervalSec));
+        //NOTE: by setting "0" to interval, then event will stop (confirmed by an experiment).
+        public Task StopFeedbackCycleAsync()
+            => SetCommandTransact(string.Format(Protocol.SetFeedbackFormat, 0));
         public Task<bool> CheckIsMovingAsync()
             => BoolTransact(Protocol.CheckIsMoving);
         public Task AttachMotorAsync(Servos servo)
