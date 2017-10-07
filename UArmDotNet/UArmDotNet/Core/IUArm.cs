@@ -5,7 +5,8 @@ namespace Baku.UArmDotNet
 {
     public interface IUArm
     {
-        //Moving Command
+        #region Motion
+
         /// <summary>
         /// Move the robot to given position.
         /// </summary>
@@ -48,8 +49,22 @@ namespace Baku.UArmDotNet
         /// <param name="speed">speed (mm/min)</param>
         /// <returns></returns>
         Task MoveRelativeAsync(Polar polarDisplacement, float speed);
+        /// <summary>
+        /// Request the time delay (wait) to the robot.
+        /// </summary>
+        /// <param name="timeMicrosec">Time to wait, in micro second</param>
+        /// <returns></returns>
+        Task DelayAsync(int timeMicrosec);
+        /// <summary>
+        /// Stop the current motion of the robot.
+        /// </summary>
+        /// <returns></returns>
+        Task StopMoveAsync();
 
-        //Setting Commands
+        #endregion
+
+        #region Setting
+
         /// <summary>
         /// Activate all motors
         /// </summary>
@@ -236,8 +251,10 @@ namespace Baku.UArmDotNet
         /// <returns></returns>
         Task SetEndEffectorHeight(float height);
 
+        #endregion
 
-        //Query Command
+        #region Query
+
         /// <summary>
         /// Get current angle joints except hand servo.
         /// </summary>
@@ -319,24 +336,50 @@ namespace Baku.UArmDotNet
         /// </summary>
         /// <returns></returns>
         Task<ServoAngles> GetDefaultValueOfAS5600Async();
+        /// <summary>
+        /// Get which of the mode the robot is.
+        /// </summary>
+        /// <returns></returns>
+        Task<ArmModes> GetArmModeAsync();
 
-        /// <summary>
-        /// Happens when position received position information.
-        /// </summary>
+        #endregion
+
+        #region Grove
+
+        Task GroveInitializeAsync(GroveModuleTypes moduleType);
+        Task GroveStartSensorDataUpdateAsync(GroveModuleTypes moduleType, int intervalMicrosec);
+        Task GroveStopSensorDataUpdateAsync(GroveModuleTypes moduleType);
+        Task GroveSetFanDutyAsync(byte dutyCycle);
+        Task GroveEnableElectroMagnetAsync(bool isEnabled);
+        Task GroveSetLcdPowerStateAsync(GroveLcdPowerStates state);
+        Task GroveSetLcdBackgroundColorAsync(byte r, byte g, byte b);
+        Task GroveSetLcdTextAsync(int line, string text);
+        Task GroveChangeToLcd2Async();
+
+        #endregion
+
+        /// <summary>Happens when robot is ready</summary>
+        event EventHandler ReceivedReady;
+        /// <summary>Happens when received position data.</summary>
         event EventHandler<PositionFeedbackEventArgs> ReceivedPositionFeedback;
-        /// <summary>
-        /// Happens when received button action.
-        /// </summary>
+        /// <summary>Happens when received button action.</summary>
         event EventHandler<ButtonActionEventArgs> ReceivedButtonAction;
-        /// <summary>
-        /// Happens when power connection state changed.
-        /// </summary>
+        /// <summary>Happens when power connection state changed.</summary>
         event EventHandler<PowerConnectionChangedEventArgs> PowerConnectionChanged;
-        /// <summary>
-        /// Happens when limited switch state changed.
-        /// </summary>
+        /// <summary>Happens when limited switch state changed.</summary>
         event EventHandler<LimitedSwitchEventArgs> LimitedSwitchStateChanged;
-        //NOTE: Recordingのコマンドについては時間管理まわりの方針がついてないのでいったん作らない
+
+        /// <summary>Happens when received color sensor data. </summary>
+        event EventHandler<GroveColorSensorDataEventArgs> ReceivedGroveColorSensorData;
+        /// <summary>Happens when received gesture sensor data. </summary>
+        event EventHandler<GroveGestureSensorDataEventArgs> ReceivedGroveGestureSensorData;
+        /// <summary>Happens when received ultrasonic distance sensor data. </summary>
+        event EventHandler<GroveUltrasonicDataEventArgs> ReceivedGroveUltrasonicSensorData;
+        /// <summary>Happens when received temperature and humidity sensor data. </summary>
+        event EventHandler<GroveTempAndHumiditySensorDataEventArgs> ReceivedGroveTemperatureAndHumiditySensorData;
+        /// <summary>Happens when received PIR motion sensor data. </summary>
+        event EventHandler<GrovePirMotionSensorDataEventArgs> ReceivedGrovePirMotionSensorData;
+
 
     }
 
@@ -385,5 +428,79 @@ namespace Baku.UArmDotNet
         public bool IsTriggerd { get; }
     }
 
+    public class GroveColorSensorDataEventArgs : EventArgs
+    {
+        public GroveColorSensorDataEventArgs(byte r, byte g, byte b)
+        {
+            R = r;
+            G = g;
+            B = b;
+        }
+
+        public byte R { get; }
+        public byte G { get; }
+        public byte B { get; }
+    }
+
+    public class GroveGestureSensorDataEventArgs : EventArgs
+    {
+        //ちょっと難しいのでは
+        public GroveGestureSensorDataEventArgs(GroveGestureSensorStates state)
+        {
+            State = state;
+        }
+        public GroveGestureSensorStates State { get; }
+    }
+
+    public class GroveUltrasonicDataEventArgs : EventArgs
+    {
+        public GroveUltrasonicDataEventArgs(int distanceCentimeter)
+        {
+            DistanceCentimeter = distanceCentimeter;            
+        }
+
+        public int DistanceCentimeter { get; }
+    }
+
+    public class GroveTempAndHumiditySensorDataEventArgs : EventArgs
+    {
+        public GroveTempAndHumiditySensorDataEventArgs(double temperature, double humidity)
+        {
+            Temperature = temperature;
+            Humidity = humidity;
+        }
+
+        /// <summary>Get the temperature in celcius</summary>
+        public double Temperature { get; }
+
+        /// <summary>Get the humidity by [%]</summary>
+        public double Humidity { get; }
+    }
+
+    public class GrovePirMotionSensorDataEventArgs : EventArgs
+    {
+        public GrovePirMotionSensorDataEventArgs(bool detectMotion)
+        {
+            DetectMotion = detectMotion;
+        }
+
+        public bool DetectMotion { get; }
+    }
+
+    /// <summary>
+    /// TODO: Test the actual data is given by "flag" style or not
+    /// </summary>
+    [Flags]
+    public enum GroveGestureSensorStates
+    {
+        Right = 0x01,
+        Left = 0x02,
+        Up = 0x04,
+        Down = 0x08,
+        Forward=0x10,
+        Backward=0x20,
+        Plus=0x40,
+        Minus=0x80,
+    }
 
 }

@@ -73,5 +73,27 @@
         LongPress = 2,
     }
 
+    /// <summary>Types of the Grove (standard) module for the robot</summary>
+    public enum GroveModuleTypes
+    {
+        ColorSensor = 10,
+        GestureSensor = 11,
+        Ultrasonic = 12,
+        Fan = 13,
+        Electromagnet = 14,
+        TemperatureAndHumiditySensor = 15,
+        PirMotion = 16,
+        RgbLcd = 17,
+    }
+
+    /// <summary>
+    /// Types of the Grove LCD power states
+    /// </summary>
+    public enum GroveLcdPowerStates
+    {
+        Off = 0,
+        On = 1,
+        Clear = 2,
+    }
 
 }

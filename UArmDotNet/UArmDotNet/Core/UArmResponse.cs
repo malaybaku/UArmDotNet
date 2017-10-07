@@ -61,7 +61,7 @@ namespace Baku.UArmDotNet
         /// <summary>Convert to integer, if subject to UArm serial data's appropriate format</summary>
         /// <returns>Converted value, or <see cref="FormatException"/> will be thrown.</returns>
         /// <exception cref="FormatException"/>
-        public int ToInt()
+        public int ToInt32()
         {
             if (Args.Length < 2)
             {

@@ -17,7 +17,7 @@ namespace Baku.UArmDotNet
             Connector.SerialConnector.PortName = portName;
             Connector.SerialConnector.BaudRate = baudRate;
         }
-        public UArm(string portName) : this (portName, DefaultBaudRate)
+        public UArm(string portName) : this(portName, DefaultBaudRate)
         {
         }
 
@@ -26,39 +26,56 @@ namespace Baku.UArmDotNet
         /// <summary>Default baud rate of the uArm Swift / uArm Swift Pro</summary>
         public static readonly int DefaultBaudRate = 115200;
 
-        //Motion
+        #region  Motion
+
         public Task MoveAsync(Position position, float speed)
             => SetCommandTransact(
-            string.Format(Protocol.MovePositionFormat, position.X, position.Y, position.Z, speed)
-            );
+                string.Format(Protocol.MovePositionFormat, position.X, position.Y, position.Z, speed)
+                );
+
         public Task MoveWithLaserOnAsync(Position position, float speed)
             => SetCommandTransact(
-            string.Format(Protocol.MovePositionLaserOnFormat, position.X, position.Y, position.Z, speed)
-            );
+                string.Format(Protocol.MovePositionLaserOnFormat, position.X, position.Y, position.Z, speed)
+                );
+
         public Task MoveAsync(Polar polar, float speed)
             => SetCommandTransact(
-            string.Format(Protocol.MovePolarFormat, polar.Stretch, polar.Rotation, polar.Height, speed)
-            );
+                string.Format(Protocol.MovePolarFormat, polar.Stretch, polar.Rotation, polar.Height, speed)
+                );
+
         public Task MoveServoAngleAsync(Servos servo, float angle)
             => SetCommandTransact(string.Format(Protocol.MoveServoFormat, (int)servo, angle));
+
         public Task MoveRelativeAsync(Position positionDisplacement, float speed)
             => SetCommandTransact(string.Format(
-            Protocol.MovePositionRelativeFormat,
-            positionDisplacement.X,
-            positionDisplacement.Y,
-            positionDisplacement.Z,
-            speed
-            ));
+                Protocol.MovePositionRelativeFormat,
+                positionDisplacement.X,
+                positionDisplacement.Y,
+                positionDisplacement.Z,
+                speed
+                ));
+
         public Task MoveRelativeAsync(Polar polarDisplacement, float speed)
             => SetCommandTransact(string.Format(
-            Protocol.MovePolarRelativeFormat,
-            polarDisplacement.Stretch,
-            polarDisplacement.Rotation,
-            polarDisplacement.Height,
-            speed
-            ));
+                Protocol.MovePolarRelativeFormat,
+                polarDisplacement.Stretch,
+                polarDisplacement.Rotation,
+                polarDisplacement.Height,
+                speed
+                ));
 
-        //Setting 
+        public Task DelayAsync(int timeMicrosec)
+            => SetCommandTransact(string.Format(
+                Protocol.DelayFormat, timeMicrosec
+                ));
+
+        public Task StopMoveAsync()
+            => SetCommandTransact(Protocol.StopMove);
+
+        #endregion
+
+        #region Setting
+
         public Task AttachAllMotorAsync()
             => SetCommandTransact(Protocol.AttachAllMotor);
         public Task DetachAllMotorAsync()
@@ -91,7 +108,7 @@ namespace Baku.UArmDotNet
             var res = await Transact(
                 string.Format(Protocol.ReadROMFormat, (int)device, addr, (int)EEPROMDataTypeCodes.Integer)
                 );
-            return res.ToInt();
+            return res.ToInt32();
         }
         public async Task<float> ReadFloatAsync(EEPROMDeviceType device, int addr)
         {
@@ -157,7 +174,7 @@ namespace Baku.UArmDotNet
             {
                 byte[] testEncode = Encoding.ASCII.GetBytes(name);
             }
-            catch(Exception)
+            catch (Exception)
             {
                 throw new UArmException("Bluetooth name must be written by ASCII char");
             }
@@ -186,7 +203,10 @@ namespace Baku.UArmDotNet
                 string.Format(Protocol.SetTheHeightOfEndEffectorFormat, height)
                 );
 
-        //Read
+        #endregion
+
+        #region Query command
+
         public async Task<ServoAngles> GetAllServoAnglesAsync()
         {
             var res = await Transact(Protocol.GetAllServoAngles);
@@ -251,27 +271,69 @@ namespace Baku.UArmDotNet
             return res.ToServoAngles();
         }
 
-        /// <summary>Occurs when robot is ready</summary>
+        public async Task<ArmModes> GetArmModeAsync()
+        {
+            var res = await Transact(Protocol.GetCurrentArmMode);
+            return (ArmModes)res.ToInt32();
+        }
+
+        #endregion
+
+        #region Grove
+
+        public Task GroveInitializeAsync(GroveModuleTypes moduleType)
+            => SetCommandTransact(string.Format(Protocol.GroveInitializeFormat, (int)moduleType));
+
+        public Task GroveStartSensorDataUpdateAsync(GroveModuleTypes moduleType, int intervalMicrosec)
+            => SetCommandTransact(string.Format(Protocol.GroveRequestReportFormat, (int)moduleType, intervalMicrosec));
+
+        public Task GroveStopSensorDataUpdateAsync(GroveModuleTypes moduleType)
+            => GroveStartSensorDataUpdateAsync(moduleType, 0);
+
+        public Task GroveSetFanDutyAsync(byte dutyCycle)
+            => SetCommandTransact(string.Format(Protocol.GroveSetValueFormat, (int)GroveModuleTypes.Fan, dutyCycle));
+
+        public Task GroveEnableElectroMagnetAsync(bool isEnabled)
+            => SetCommandTransact(string.Format(
+                Protocol.GroveSetValueFormat, (int)GroveModuleTypes.Electromagnet, (isEnabled ? 1 : 0)
+                ));
+
+        public Task GroveSetLcdPowerStateAsync(GroveLcdPowerStates state)
+            => SetCommandTransact(string.Format(
+                Protocol.GroveSetLcdPowerStateFormat, (int)state
+                ));
+
+        public Task GroveSetLcdBackgroundColorAsync(byte r, byte g, byte b)
+            => SetCommandTransact(string.Format(
+                Protocol.GroveSetLcdBackgroundFormat, r, g, b
+                ));
+
+        public Task GroveSetLcdTextAsync(int line, string text)
+            => SetCommandTransact(string.Format(
+                Protocol.GroveSetLcdTextFormat, line, text
+                ));
+
+        public Task GroveChangeToLcd2Async()
+            => SetCommandTransact(Protocol.GroveChangeToUart2);
+
+        #endregion
+
+        #region Events
+
         public event EventHandler ReceivedReady;
-
-        /// <summary>Occurs when received position feedback</summary>
         public event EventHandler<PositionFeedbackEventArgs> ReceivedPositionFeedback;
-
-        /// <summary>Occurs when received button action</summary>
         public event EventHandler<ButtonActionEventArgs> ReceivedButtonAction;
-
-        /// <summary>Occurs when power connection state changed</summary>
         public event EventHandler<PowerConnectionChangedEventArgs> PowerConnectionChanged;
-
-        /// <summary>Occurs when limited switch status changed</summary>
         public event EventHandler<LimitedSwitchEventArgs> LimitedSwitchStateChanged;
 
-        //NOTE: Recordingのコマンドについては時間管理まわりの方針がついてないのでいったん作らない
+        public event EventHandler<GroveColorSensorDataEventArgs> ReceivedGroveColorSensorData;
+        public event EventHandler<GroveGestureSensorDataEventArgs> ReceivedGroveGestureSensorData;
+        public event EventHandler<GroveUltrasonicDataEventArgs> ReceivedGroveUltrasonicSensorData;
+        public event EventHandler<GroveTempAndHumiditySensorDataEventArgs> ReceivedGroveTemperatureAndHumiditySensorData;
+        public event EventHandler<GrovePirMotionSensorDataEventArgs> ReceivedGrovePirMotionSensorData;
 
-        //private void Post(string command)
-        //{
-        //    throw new NotImplementedException();
-        //}
+        #endregion
+
         private Task<UArmResponse> Transact(string command)
             => Connector.Transact(command);
 
@@ -307,31 +369,21 @@ namespace Baku.UArmDotNet
 
         private void OnReceivedEvent(object sender, UArmEventMessageEventArgs e)
         {
-            CheckReceivedReady(e.EventMessage);
-            CheckReceivedPositionFeedback(e.EventMessage);
-            CheckReceivedButtonAction(e.EventMessage);
-            CheckPowerConnectionChanged(e.EventMessage);
-            CheckLimitedSwitchStateChanged(e.EventMessage);
-            switch(e.EventMessage.Id)
-            {
-                case 6:
-                    int switchNumber;
-                    int switchState;
-                    if (e.EventMessage.Args.Length > 1 &&
-                        int.TryParse(e.EventMessage.Args[0], out switchNumber) &&
-                        int.TryParse(e.EventMessage.Args[1], out switchState)
-                        )
-                    {
-                        LimitedSwitchStateChanged?.Invoke(
-                            this,
-                            new LimitedSwitchEventArgs(switchNumber, switchState != 0)
-                            );
-                    }
-                    return;
-                default:
-                    //フォーマット不正だけどいったん無視
-                    return;
-            }
+            var message = e.EventMessage;
+
+            CheckReceivedReady(message);
+            CheckReceivedPositionFeedback(message);
+            CheckReceivedButtonAction(message);
+            CheckPowerConnectionChanged(message);
+            CheckLimitedSwitchStateChanged(message);
+
+            CheckGroveColorSensorEvent(message);
+            CheckGroveGestureSensorEvent(message);
+            CheckGroveUltrasonicSensorEvent(message);
+            CheckGroveTemperatureAndHumiditySensorEvent(message);
+            CheckGrovePirSensorEvent(message);
+
+            //コレ以外は想定外フォーマットのケースなのでとりあえず無視
         }
 
         private void CheckReceivedReady(UArmEventMessage message)
@@ -348,7 +400,7 @@ namespace Baku.UArmDotNet
                 message.Args.Length > 3 &&
                 float.TryParse(message.Args[0].Substring(1), out x) &&
                 float.TryParse(message.Args[1].Substring(1), out y) &&
-                float.TryParse(message.Args[2].Substring(1), out z) && 
+                float.TryParse(message.Args[2].Substring(1), out z) &&
                 float.TryParse(message.Args[3].Substring(1), out handAngle)
                 )
             {
@@ -360,10 +412,9 @@ namespace Baku.UArmDotNet
         }
         private void CheckReceivedButtonAction(UArmEventMessage message)
         {
-            int buttonType;
-            int buttonActionType;
+            int buttonType, buttonActionType;
 
-            if (message.Id == Protocol.EventIdButton && 
+            if (message.Id == Protocol.EventIdButton &&
                 message.Args.Length > 1 &&
                 int.TryParse(message.Args[0].Substring(1), out buttonType) &&
                 int.TryParse(message.Args[1].Substring(1), out buttonActionType)
@@ -378,7 +429,6 @@ namespace Baku.UArmDotNet
         private void CheckPowerConnectionChanged(UArmEventMessage message)
         {
             int powerState;
-
             if (message.Id == Protocol.EventIdPowerConnection &&
                 message.Args.Length > 0 &&
                 int.TryParse(message.Args[0].Substring(1), out powerState)
@@ -392,9 +442,8 @@ namespace Baku.UArmDotNet
         }
         private void CheckLimitedSwitchStateChanged(UArmEventMessage message)
         {
-            int switchNumber;
-            int switchState;
-            if (message.Id == Protocol.EventIdLimitedSwitch && 
+            int switchNumber, switchState;
+            if (message.Id == Protocol.EventIdLimitedSwitch &&
                 message.Args.Length > 1 &&
                 int.TryParse(message.Args[0].Substring(1), out switchNumber) &&
                 int.TryParse(message.Args[1].Substring(1), out switchState)
@@ -403,6 +452,86 @@ namespace Baku.UArmDotNet
                 LimitedSwitchStateChanged?.Invoke(
                     this,
                     new LimitedSwitchEventArgs(switchNumber, switchState != 0)
+                    );
+            }
+        }
+
+        private void CheckGroveColorSensorEvent(UArmEventMessage message)
+        {
+            int moduleType;
+            byte r, g, b;
+            if (message.Id == Protocol.EventIdGroveModuleDataReceived && 
+                message.Args.Length > 3 && 
+                int.TryParse(message.Args[0].Substring(1), out moduleType) && 
+                moduleType == (int)GroveModuleTypes.ColorSensor &&
+                byte.TryParse(message.Args[1].Substring(1), out r) &&
+                byte.TryParse(message.Args[2].Substring(1), out g) &&
+                byte.TryParse(message.Args[3].Substring(1), out b) 
+                )
+            {
+                ReceivedGroveColorSensorData?.Invoke(this, new GroveColorSensorDataEventArgs(r, g, b));
+            }
+        }
+        private void CheckGroveGestureSensorEvent(UArmEventMessage message)
+        {
+            int moduleType;
+            int gestureCode;
+            if (message.Id == Protocol.EventIdGroveModuleDataReceived &&
+                message.Args.Length > 1 &&
+                int.TryParse(message.Args[0].Substring(1), out moduleType) &&
+                moduleType == (int)GroveModuleTypes.GestureSensor &&
+                int.TryParse(message.Args[1].Substring(1), out gestureCode)
+                )
+            {
+                ReceivedGroveGestureSensorData?.Invoke(
+                    this, new GroveGestureSensorDataEventArgs((GroveGestureSensorStates)gestureCode)
+                    );
+            }
+        }
+        private void CheckGroveUltrasonicSensorEvent(UArmEventMessage message)
+        {
+            int moduleType;
+            int distance;
+            if (message.Id == Protocol.EventIdGroveModuleDataReceived &&
+                message.Args.Length > 1 &&
+                int.TryParse(message.Args[0].Substring(1), out moduleType) &&
+                moduleType == (int)GroveModuleTypes.Ultrasonic &&
+                int.TryParse(message.Args[1].Substring(1), out distance)
+                )
+            {
+                ReceivedGroveUltrasonicSensorData?.Invoke(this, new GroveUltrasonicDataEventArgs(distance));
+            }
+        }
+        private void CheckGroveTemperatureAndHumiditySensorEvent(UArmEventMessage message)
+        {
+            int moduleType;
+            double temperature, humidity;            
+            if (message.Id == Protocol.EventIdGroveModuleDataReceived &&
+                message.Args.Length > 2 &&
+                int.TryParse(message.Args[0].Substring(1), out moduleType) &&
+                moduleType == (int)GroveModuleTypes.TemperatureAndHumiditySensor &&
+                double.TryParse(message.Args[1].Substring(1), out temperature) && 
+                double.TryParse(message.Args[2].Substring(1), out humidity)
+                )
+            {
+                ReceivedGroveTemperatureAndHumiditySensorData?.Invoke(
+                    this, new GroveTempAndHumiditySensorDataEventArgs(temperature, humidity)
+                    );
+            }
+        }
+        private void CheckGrovePirSensorEvent(UArmEventMessage message)
+        {
+            int moduleType;
+            int detectMotion;
+            if (message.Id == Protocol.EventIdGroveModuleDataReceived &&
+                message.Args.Length > 1 &&
+                int.TryParse(message.Args[0].Substring(1), out moduleType) &&
+                moduleType == (int)GroveModuleTypes.Ultrasonic &&
+                int.TryParse(message.Args[1].Substring(1), out detectMotion)
+                )
+            {
+                ReceivedGrovePirMotionSensorData?.Invoke(
+                    this, new GrovePirMotionSensorDataEventArgs(detectMotion != 0)
                     );
             }
         }

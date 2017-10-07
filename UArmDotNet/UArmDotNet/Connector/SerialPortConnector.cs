@@ -6,7 +6,7 @@ using System.Text;
 
 namespace Baku.UArmDotNet
 {
-    /// <summary>Wrapper of the <see cref="System.IO.Ports.SerialPort"/> to connect safely</summary>
+    /// <summary>Wrapper of the <see cref="SerialPort"/> to connect safely</summary>
     public class SerialRobotConnector
     {
         private readonly SerialPort _serial = new SerialPort();

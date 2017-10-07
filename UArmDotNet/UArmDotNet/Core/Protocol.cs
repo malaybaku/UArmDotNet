@@ -11,11 +11,13 @@
 
         //Motion Command
         public static readonly string MovePositionFormat = "G0 X{0:0.##} Y{1:0.##} Z{2:0.##} F{3:0.##}";
-        public static readonly string MovePositionLaserOnFormat = "G0 X{0:0.##} Y{1:.##} Z{2:0.##} F{3:0.##}";
+        public static readonly string MovePositionLaserOnFormat = "G1 X{0:0.##} Y{1:.##} Z{2:0.##} F{3:0.##}";
         public static readonly string MovePolarFormat = "G2201 S{0} R{1} H{2} F{3}";
         public static readonly string MoveServoFormat = "G2202 N{0} V{1}";
         public static readonly string MovePositionRelativeFormat = "G2204 X{0:0.##} Y{1:0.##} Z{2:0.##} F{3:0.##}";
         public static readonly string MovePolarRelativeFormat = "G2205 S{0:0.##} R{1:0.##} H{2:0.##} F{3:0.##}";
+        public static readonly string DelayFormat = "G2004 P{0}";
+        public static readonly string StopMove = "G2203";
 
 
         //Setting Command
@@ -73,13 +75,25 @@
         public static readonly string GetAnalogPinValueFormat = "P2241 N{0}";
         public static readonly string GetDefaultValueOfAS5600 = "P2242";
 
+        public static readonly string GetCurrentArmMode = "P2400";
+
+        // Grove Modules
+        public static readonly string GroveInitializeFormat = "M2300 N{0}";
+        public static readonly string GroveRequestReportFormat = "M2301 N{0} V{1}";
+        public static readonly string GroveSetValueFormat = "M2302 N{0} V{1}";
+        public static readonly string GroveSetLcdPowerStateFormat = "M2303 N17 T{0}";
+        public static readonly string GroveSetLcdBackgroundFormat = "M2303 N17 R{0} G{1} B{2}";
+        public static readonly string GroveSetLcdTextFormat = "M2303 S{0} V{1}";
+        public static readonly string GroveChangeToUart2 = "M2500";
+
         // Event Message
         public static readonly int EventIdReady = 1;
         public static readonly int EventIdTimedFeedback = 3;
         public static readonly int EventIdButton = 4;
         public static readonly int EventIdPowerConnection = 5;
         public static readonly int EventIdLimitedSwitch = 6;
+        public static readonly int EventIdGroveModuleDataReceived = 10;
 
-
+        
     }
 }
