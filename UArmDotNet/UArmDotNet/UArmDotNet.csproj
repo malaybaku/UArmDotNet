@@ -51,6 +51,7 @@
     <Compile Include="Core\UArmEventMessage.cs" />
     <Compile Include="DataTypes\Constants.cs" />
     <Compile Include="DataTypes\Enums.cs" />
+    <Compile Include="DataTypes\EventArgs.cs" />
     <Compile Include="DataTypes\Polar.cs" />
     <Compile Include="DataTypes\Position.cs" />
     <Compile Include="Core\Protocol.cs" />

@@ -1,4 +1,6 @@
-﻿namespace Baku.UArmDotNet
+﻿using System;
+
+namespace Baku.UArmDotNet
 {
     /// <summary>Represent servo motor types</summary>
     public enum Servos
@@ -96,4 +98,19 @@
         Clear = 2,
     }
 
+    /// <summary>
+    /// TODO: Test the actual data is given by "flag" style or not
+    /// </summary>
+    [Flags]
+    public enum GroveGestureSensorStates
+    {
+        Right = 0x01,
+        Left = 0x02,
+        Up = 0x04,
+        Down = 0x08,
+        Forward = 0x10,
+        Backward = 0x20,
+        Plus = 0x40,
+        Minus = 0x80,
+    }
 }
